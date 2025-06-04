@@ -74,11 +74,15 @@ def index():
             tpl_path = TPL_SENZA_ACCUMULO
 
         # 4) Costruisci nome file univoco (UUID) per evitare collisioni
-        uid = uuid.uuid4().hex[:8]
-        nome_docx_out = f"preventivo_{nome}_{cognome}_{uid}.docx"
-        nome_pdf_out  = f"preventivo_{nome}_{cognome}_{uid}.pdf"
-        path_docx_out = os.path.join(OUT_DIR, nome_docx_out)
-        path_pdf_out  = os.path.join(OUT_DIR, nome_pdf_out)
+        base_name      = f"temp_{dati['nome']}_{dati['cognome']}_{uid}"
+        nome_docx_out  = base_name + ".docx"
+        # LibreOffice genererà “base_name.pdf” (non “Preventivo_…”)
+        path_docx_out  = os.path.join(OUT_DIR, nome_docx_out)
+        # Questo è il nome reale che LibreOffice produrrà:
+        pdf_generated  = base_name + ".pdf"
+        path_pdf_generated = os.path.join(OUT_DIR, pdf_generated)
+        # Il nome con cui vogliamo far scaricare il PDF al browser:
+        download_name = f"Preventivo_{dati['nome']}_{dati['cognome']}_{uid}.pdf"
 
         # 5) Prepara contesto per docxtpl
         contesto = {
