@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calcolatore Preventivo Fotovoltaico</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
+    .container { max-width: 600px; margin: auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { text-align: center; margin-bottom: 20px; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, select { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; }
+    button { margin-top: 20px; width: 100%; padding: 10px; background: #2c7873; color: white; border: none; border-radius: 4px; font-size: 16px; }
+    button:hover { background: #235d59; }
+    .flash { padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+    .error { background: #f8d7da; color: #721c24; }
+    .info  { background: #d1ecf1; color: #0c5460; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Genera Preventivo Fotovoltaico</h1>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="flash {{ category }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('index') }}">
+      <label for="nome">Nome Cliente</label>
+      <input type="text" id="nome" name="nome" placeholder="Mario" required>
+
+      <label for="cognome">Cognome Cliente</label>
+      <input type="text" id="cognome" name="cognome" placeholder="Rossi" required>
+
+      <label for="potenza">Taglia Impianto (kW)</label>
+      <select id="potenza" name="potenza" required>
+        <option value="3">3 kW</option>
+        <option value="4">4 kW</option>
+        <option value="5">5 kW</option>
+        <option value="6">6 kW</option>
+        <option value="8">8 kW</option>
+        <option value="10">10 kW</option>
+        <option value="15">15 kW</option>
+        <option value="20">20 kW</option>
+        <option value="25">25 kW</option>
+        <option value="30">30 kW</option>
+        <option value="40">40 kW</option>
+        <option value="50">50 kW</option>
+        <option value="60">60 kW</option>
+      </select>
+
+      <label for="accumulo">Capacità Accumulo (kWh)</label>
+      <select id="accumulo" name="accumulo">
+        <option value="0">Nessun accumulo</option>
+        <option value="5">5 kWh</option>
+        <option value="7.5">7.5 kWh</option>
+        <option value="10">10 kWh</option>
+        <option value="12.5">12.5 kWh</option>
+        <option value="15">15 kWh</option>
+        <option value="17.5">17.5 kWh</option>
+        <option value="20">20 kWh</option>
+        <option value="22.5">22.5 kWh</option>
+        <option value="25">25 kWh</option>
+      </select>
+
+      <label for="prezzo">Prezzo di Listino (senza IVA)</label>
+      <input type="number" id="prezzo" name="prezzo" placeholder="0" step="1" required>
+
+      <label for="margine">Margine (opzionale)</label>
+      <input type="number" id="margine" name="margine" placeholder="0.00" step="0.01">
+
+      <label for="ritenuta">Ritenuta (opzionale)</label>
+      <input type="number" id="ritenuta" name="ritenuta" placeholder="0.00" step="0.01">
+
+      <label for="flusso">Flusso di Cassa (opzionale)</label>
+      <input type="number" id="flusso" name="flusso" placeholder="0.00" step="0.01">
+
+      <button type="submit">Genera Preventivo PDF</button>
+    </form>
+  </div>
+</body>
+</html>
