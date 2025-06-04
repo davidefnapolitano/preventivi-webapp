@@ -1,87 +1,414 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Calcolatore Preventivo Fotovoltaico</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
-    .container { max-width: 600px; margin: auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    h1 { text-align: center; margin-bottom: 20px; }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    input, select { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; }
-    button { margin-top: 20px; width: 100%; padding: 10px; background: #2c7873; color: white; border: none; border-radius: 4px; font-size: 16px; }
+    .container { max-width: 700px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h1 { text-align: center; margin-bottom: 20px; color: #2c7873; }
+    label { display: block; margin-top: 15px; font-weight: bold; }
+    input, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+    button { margin-top: 20px; width: 100%; padding: 12px; background: #2c7873; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
     button:hover { background: #235d59; }
-    .flash { padding: 10px; margin-bottom: 10px; border-radius: 4px; }
-    .error { background: #f8d7da; color: #721c24; }
-    .info  { background: #d1ecf1; color: #0c5460; }
+    .results, .discount-section { margin-top: 25px; padding: 15px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #ff9a3c; }
+    .result-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #e0e0e0; }
+    .result-item:last-child { border-bottom: none; }
+    .result-label { font-weight: 600; }
+    .result-value { font-weight: 700; color: #2c7873; }
+    .hidden { display: none; }
+    .note { font-size: 0.9rem; color: #666; margin-top: 5px; font-style: italic; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Genera Preventivo Fotovoltaico</h1>
 
-    <!-- Flash messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, msg in messages %}
-          <div class="flash {{ category }}">{{ msg }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+    <!-- MESSAGGI FLASH -->
+    <div id="flash-message" class="hidden"></div>
 
-    <form method="POST" action="{{ url_for('index') }}">
+    <!-- FORM PRINCIPALE -->
+    <form id="preventivo-form" onsubmit="return false;">
+      <!-- 1. Nome Cliente -->
       <label for="nome">Nome Cliente</label>
-      <input type="text" id="nome" name="nome" placeholder="Mario" required>
+      <input type="text" id="nome" name="nome" placeholder="Mario" required />
 
+      <!-- 2. Cognome Cliente -->
       <label for="cognome">Cognome Cliente</label>
-      <input type="text" id="cognome" name="cognome" placeholder="Rossi" required>
+      <input type="text" id="cognome" name="cognome" placeholder="Rossi" required />
 
-      <label for="potenza">Taglia Impianto (kW)</label>
-      <select id="potenza" name="potenza" required>
-        <option value="3">3 kW</option>
-        <option value="4">4 kW</option>
-        <option value="5">5 kW</option>
-        <option value="6">6 kW</option>
-        <option value="8">8 kW</option>
-        <option value="10">10 kW</option>
-        <option value="15">15 kW</option>
-        <option value="20">20 kW</option>
-        <option value="25">25 kW</option>
-        <option value="30">30 kW</option>
-        <option value="40">40 kW</option>
-        <option value="50">50 kW</option>
-        <option value="60">60 kW</option>
+      <!-- 3. Tipologia di Impianto -->
+      <label for="tipologia">Tipologia di Impianto</label>
+      <select id="tipologia" name="tipologia" required>
+        <option value="">-- Seleziona --</option>
+        <option value="Mono">Monofase</option>
+        <option value="Tri">Trifase</option>
       </select>
 
+      <!-- 4. Taglia Impianto (dipende da Tipologia) -->
+      <label for="taglia">Taglia Impianto (kW)</label>
+      <select id="taglia" name="taglia" disabled required>
+        <!-- Opzioni popolate dinamicamente da JS -->
+      </select>
+
+      <!-- 5. Capacità Accumulo (dipende da Tipologia) -->
       <label for="accumulo">Capacità Accumulo (kWh)</label>
-      <select id="accumulo" name="accumulo">
-        <option value="0">Nessun accumulo</option>
-        <option value="5">5 kWh</option>
-        <option value="7.5">7.5 kWh</option>
-        <option value="10">10 kWh</option>
-        <option value="12.5">12.5 kWh</option>
-        <option value="15">15 kWh</option>
-        <option value="17.5">17.5 kWh</option>
-        <option value="20">20 kWh</option>
-        <option value="22.5">22.5 kWh</option>
-        <option value="25">25 kWh</option>
+      <select id="accumulo" name="accumulo" disabled>
+        <!-- Opzioni popolate dinamicamente da JS -->
       </select>
 
-      <label for="prezzo">Prezzo di Listino (senza IVA)</label>
-      <input type="number" id="prezzo" name="prezzo" placeholder="0" step="1" required>
+      <!-- 6. Provvigione (%) con default 6 -->
+      <label for="provvigione">Provvigione (%) <span class="note">(default 6%)</span></label>
+      <input type="number" id="provvigione" name="provvigione" placeholder="6" min="0" max="100" step="0.1" />
 
-      <label for="margine">Margine (opzionale)</label>
-      <input type="number" id="margine" name="margine" placeholder="0.00" step="0.01">
-
-      <label for="ritenuta">Ritenuta (opzionale)</label>
-      <input type="number" id="ritenuta" name="ritenuta" placeholder="0.00" step="0.01">
-
-      <label for="flusso">Flusso di Cassa (opzionale)</label>
-      <input type="number" id="flusso" name="flusso" placeholder="0.00" step="0.01">
-
-      <button type="submit">Genera Preventivo PDF</button>
+      <!-- 7. Bottone per il calcolo -->
+      <button id="calcolaBtn">Calcola Preventivo</button>
     </form>
+
+
+    <!-- 8. SEZIONE RISULTATI (nascosta fino a Calcola) -->
+    <div id="risultati" class="results hidden">
+      <div class="result-item">
+        <span class="result-label">Potenza Impianto:</span>
+        <span class="result-value" id="display-potenza">-</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Accumulo:</span>
+        <span class="result-value" id="display-accumulo">-</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Tipo di Fase:</span>
+        <span class="result-value" id="display-tipologia">-</span>
+      </div>
+      <hr>
+      <div class="result-item">
+        <span class="result-label">Costo Complessivo:</span>
+        <span class="result-value" id="costo-complessivo">-</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Prezzo di Listino (IVA 10%):</span>
+        <span class="result-value" id="prezzo-listino">-</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Provvigione (€):</span>
+        <span class="result-value" id="provvigione-val">-</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Margine (€):</span>
+        <span class="result-value" id="margine-val">-</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Ritenuta d’Acconto (€):</span>
+        <span class="result-value" id="ritenuta-val">-</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Flusso di Cassa (€):</span>
+        <span class="result-value" id="flusso-val">-</span>
+      </div>
+    </div>
+
+
+    <!-- 9. SEZIONE SCONTO (nascosta finché non calcoli) -->
+    <div id="sconto-section" class="discount-section hidden">
+      <label for="sconto">Applica Sconto (%)</label>
+      <input type="number" id="sconto" name="sconto" placeholder="0" min="0" max="100" step="0.1" />
+      <button id="applicaScontoBtn">Aggiorna</button>
+    </div>
+
+    <!-- 10. Bottone per Generare il PDF (nascosto finché non calcoli) -->
+    <button id="generaPdfBtn" class="hidden">Genera Preventivo PDF</button>
   </div>
+
+  <!-- ============================= -->
+  <!-- ====== SCRIPT JAVASCRIPT ==== -->
+  <!-- ============================= -->
+  <script>
+    // --- DATI PER IL CALCOLO DEI COSTI ---
+    const costData = {
+      pannelli: {
+        Mono: {3: 399, 4: 513, 5: 684, 6: 798},
+        Tri: {6: 798, 8: 1026, 10: 1311, 15: 1938, 20: 2565, 25: 3192, 30: 3819, 40: 5073, 50: 6384, 60: 7638}
+      },
+      numPannelli: {
+        Mono: {3: 7, 4: 9, 5: 12, 6: 14},
+        Tri: {6: 14, 8: 18, 10: 23, 15: 34, 20: 45, 25: 56, 30: 67, 40: 89, 50: 112, 60: 134}
+      },
+      quadri: {
+        Mono: {3: 168, 4: 175, 5: 149, 6: 149},
+        Tri: {6: 360, 8: 360, 10: 610, 15: 675, 20: 1475, 25: 1640, 30: 1740, 40: 1905, 50: 2230, 60: 2230}
+      },
+      staffaggio: {3:240,4:320,5:400,6:480,8:640,10:800,15:1200,20:1600,25:2000,30:2400,40:3200,50:4000,60:4800},
+      accumulo: {
+        Mono: {0:0, 5:975, 10:1775, 15:2665, 20:3465},
+        Tri: {0:0, 7.5:2135, 10:2625, 12.5:3115, 15:3605, 17.5:4095, 20:4585, 22.5:5075, 25:5565}
+      },
+      installazione: {
+        Mono: {
+          noAccumulo: {3:1100,4:1300,5:1500,6:1700},
+          conAccumulo: {3:1350,4:1550,5:1750,6:1950}
+        },
+        Tri: {
+          noAccumulo: {6:1700,8:2100,10:2500,15:3500,20:4500,25:5500,30:6500,40:8500,50:10500,60:12500},
+          conAccumulo: {6:1950,8:2350,10:2750,15:3750,20:4750,25:5750,30:6750,40:8750,50:10750,60:12750}
+        }
+      },
+      inverter: {
+        Mono: {
+          stringa: {3:350,4:390,5:415,6:431},
+          ibrido: {3:695,4:745,5:765,6:785}
+        },
+        Tri: {
+          stringa: {6:705,8:720,10:731,15:860,20:965,25:1075,30:1255,40:1685,50:1825,60:1895},
+          ibrido: {6:1365,8:1287,10:1475,15:1565,20:2065,25:2475,30:2795}
+        }
+      },
+      meter: {
+        Mono: {3:50,4:50,5:50,6:50},
+        Tri: {6:119,8:119,10:119,15:119,20:119,25:159,30:159,40:159,50:159,60:159}
+      }
+    };
+
+    // --- ELEMENTI DEL DOM ---
+    const tipologiaEl    = document.getElementById('tipologia');
+    const tagliaEl       = document.getElementById('taglia');
+    const accumuloEl     = document.getElementById('accumulo');
+    const provvigioneEl  = document.getElementById('provvigione');
+    const calcolaBtn     = document.getElementById('calcolaBtn');
+    const risultatiDiv   = document.getElementById('risultati');
+    const scontoSection  = document.getElementById('sconto-section');
+    const scontoEl       = document.getElementById('sconto');
+    const applicaScontoBtn = document.getElementById('applicaScontoBtn');
+    const generaPdfBtn   = document.getElementById('generaPdfBtn');
+
+    // Span dove mostriamo i risultati
+    const displayPotenza      = document.getElementById('display-potenza');
+    const displayAccumulo     = document.getElementById('display-accumulo');
+    const displayTipologia    = document.getElementById('display-tipologia');
+    const costoComplessivoEl  = document.getElementById('costo-complessivo');
+    const prezzoListinoEl     = document.getElementById('prezzo-listino');
+    const provvigioneValEl    = document.getElementById('provvigione-val');
+    const margineValEl        = document.getElementById('margine-val');
+    const ritenutaValEl       = document.getElementById('ritenuta-val');
+    const flussoValEl         = document.getElementById('flusso-val');
+
+    // Variabili globali per i risultati correnti
+    let currentCalc = {
+      costo: 0,
+      prezzoListino: 0,
+      ritenuta: 0,
+      provvigione: 0,
+      margine: 0,
+      flusso: 0
+    };
+
+    // --- UTILITY DI ARROTONDAMENTO ---
+    function roundToMultiple(value, multiple) {
+      return Math.round(value / multiple) * multiple;
+    }
+    function floorToMultiple(value, multiple) {
+      return Math.floor(value / multiple) * multiple;
+    }
+
+    // --- POPOLA I DROPDOWN DI TAGLIA E ACCUMULO IN BASE A TIPOLOGIA ---
+    function aggiornaDropdowns() {
+      const t = tipologiaEl.value;
+      tagliaEl.innerHTML   = '';
+      accumuloEl.innerHTML = '';
+      if (!t) {
+        tagliaEl.disabled   = true;
+        accumuloEl.disabled = true;
+        return;
+      }
+      tagliaEl.disabled   = false;
+      accumuloEl.disabled = false;
+      // Taglia
+      let opTag = document.createElement('option');
+      opTag.value = '';
+      opTag.textContent = '-- Seleziona --';
+      tagliaEl.appendChild(opTag);
+      const taglie = (t === 'Mono') 
+        ? [3,4,5,6] 
+        : [6,8,10,15,20,25,30,40,50,60];
+      taglie.forEach(kW => {
+        let o = document.createElement('option');
+        o.value = kW;
+        o.textContent = kW + ' kW';
+        tagliaEl.appendChild(o);
+      });
+      // Accumulo
+      let opAcc = document.createElement('option');
+      opAcc.value = 0;
+      opAcc.textContent = 'Nessun accumulo';
+      accumuloEl.appendChild(opAcc);
+      const accs = (t === 'Mono') 
+        ? [5,10,15,20] 
+        : [7.5,10,12.5,15,17.5,20,22.5,25];
+      accs.forEach(kWh => {
+        let o = document.createElement('option');
+        o.value = kWh;
+        o.textContent = kWh + ' kWh';
+        accumuloEl.appendChild(o);
+      });
+    }
+
+    tipologiaEl.addEventListener('change', aggiornaDropdowns);
+
+    // --- CALCOLO DEL PREVENTIVO ---
+    calcolaBtn.addEventListener('click', () => {
+      // 1. Valori di input
+      const nome = document.getElementById('nome').value.trim();
+      const cognome = document.getElementById('cognome').value.trim();
+      const tipologia = tipologiaEl.value;
+      const potenza = parseFloat(tagliaEl.value);
+      const accumulo = parseFloat(accumuloEl.value);
+      let provvigionePerc = parseFloat(provvigioneEl.value);
+      if (isNaN(provvigionePerc) || provvigionePerc <= 0) provvigionePerc = 6;
+
+      // Validazioni base
+      if (!nome || !cognome || !tipologia || isNaN(potenza)) {
+        alert('Compila tutti i campi obbligatori (Nome, Cognome, Tipologia, Taglia).');
+        return;
+      }
+
+      // 2. Calcolo COSTO
+      let costo = 0;
+      // Pannelli
+      costo += costData.pannelli[tipologia][potenza] || 0;
+      // Quadri
+      costo += costData.quadri[tipologia][potenza] || 0;
+      // Staffaggio
+      costo += costData.staffaggio[potenza] || 0;
+      // Accumulo
+      if (accumulo > 0) {
+        costo += costData.accumulo[tipologia][accumulo] || 0;
+      }
+      // Installazione
+      const tabInst = (accumulo > 0)
+        ? costData.installazione[tipologia].conAccumulo
+        : costData.installazione[tipologia].noAccumulo;
+      costo += tabInst[potenza] || 0;
+      // Inverter (ibrido con accumulo, stringa senza)
+      const invType = (accumulo > 0) ? 'ibrido' : 'stringa';
+      costo += costData.inverter[tipologia][invType][potenza] || 0;
+      // Meter
+      costo += costData.meter[tipologia][potenza] || 0;
+
+      // 3. Prezzo di Listino (arrot. a 100): (costo+300) * 1.5 * 1.1
+      let prezzoListino = roundToMultiple((costo + 300) * 1.5 * 1.1, 100);
+
+      // 4. Ritenuta (solo se residenziale <20 kW). Qui assumiamo sempre residenziale: mettiamo condizione potenza<20
+      let ritenuta = 0;
+      if (potenza < 20) {
+        ritenuta = prezzoListino / 1.22 * 0.11;
+      }
+
+      // 5. Provvigione (€): arrotonda al multiplo di 10 di (prezzoListino/1.1 * provvigionePerc/100)
+      let provvigione = roundToMultiple((prezzoListino / 1.1) * (provvigionePerc / 100), 10);
+
+      // 6. Margine = prezzoListino/1.1 - provvigione - costo
+      let margine = prezzoListino / 1.1 - provvigione - costo;
+
+      // 7. Flusso di cassa = margine - ritenuta
+      let flusso = margine - ritenuta;
+
+      // Salva i risultati globali
+      currentCalc = { costo, prezzoListino, ritenuta, provvigione, margine, flusso };
+
+      // 8. Aggiorna la UI
+      displayPotenza.textContent = potenza + ' kW';
+      displayAccumulo.textContent = (accumulo > 0 ? accumulo + ' kWh' : 'Nessuno');
+      displayTipologia.textContent = (tipologia === 'Mono' ? 'Monofase' : 'Trifase');
+      costoComplessivoEl.textContent = costo.toFixed(2) + ' €';
+      prezzoListinoEl.textContent = prezzoListino.toFixed(2) + ' €';
+      provvigioneValEl.textContent = provvigione.toFixed(2) + ' € (' + provvigionePerc.toFixed(1) + '%)';
+      margineValEl.textContent = margine.toFixed(2) + ' €';
+      ritenutaValEl.textContent = ritenuta.toFixed(2) + ' €';
+      flussoValEl.textContent = flusso.toFixed(2) + ' €';
+
+      risultatiDiv.classList.remove('hidden');
+      scontoSection.classList.remove('hidden');
+      generaPdfBtn.classList.remove('hidden');
+      document.getElementById('flash-message').classList.add('hidden');
+    });
+
+    // --- APPLICA SCONTO E RICALCOLO ---
+    applicaScontoBtn.addEventListener('click', () => {
+      let scontoPerc = parseFloat(scontoEl.value);
+      if (isNaN(scontoPerc) || scontoPerc < 0) {
+        alert('Inserisci una percentuale di sconto valida.');
+        return;
+      }
+      // Prezzo scontato: arrotonda per difetto al multiplo di 50
+      let prezzoScontato = floorToMultiple(currentCalc.prezzoListino * (1 - scontoPerc / 100), 50);
+
+      // Ricalcola ritenuta, provvigione, margine, flusso col nuovo prezzo
+      let ritenuta2 = 0;
+      const potenza = parseFloat(tagliaEl.value);
+      if (potenza < 20) {
+        ritenuta2 = prezzoScontato / 1.22 * 0.11;
+      }
+      const provvigionePerc = parseFloat(provvigioneEl.value) > 0 ? parseFloat(provvigioneEl.value) : 6;
+      let provvigione2 = roundToMultiple((prezzoScontato / 1.1) * (provvigionePerc / 100), 10);
+      let margine2 = prezzoScontato / 1.1 - provvigione2 - currentCalc.costo;
+      let flusso2 = margine2 - ritenuta2;
+
+      // Aggiorna i valori
+      prezzoListinoEl.textContent = prezzoScontato.toFixed(2) + ' €';
+      provvigioneValEl.textContent = provvigione2.toFixed(2) + ' € (' + provvigionePerc.toFixed(1) + '%)';
+      margineValEl.textContent = margine2.toFixed(2) + ' €';
+      ritenutaValEl.textContent = ritenuta2.toFixed(2) + ' €';
+      flussoValEl.textContent = flusso2.toFixed(2) + ' €';
+
+      // Aggiorna currentCalc
+      currentCalc.prezzoListino = prezzoScontato;
+      currentCalc.ritenuta = ritenuta2;
+      currentCalc.provvigione = provvigione2;
+      currentCalc.margine = margine2;
+      currentCalc.flusso = flusso2;
+    });
+
+    // --- PULSANTE PER GENERARE IL PDF ---
+    generaPdfBtn.addEventListener('click', () => {
+      // Costruisci un payload JSON con tutti i dati
+      const payload = {
+        nome: document.getElementById('nome').value.trim(),
+        cognome: document.getElementById('cognome').value.trim(),
+        tipologia: tipologiaEl.value,
+        potenza: parseFloat(tagliaEl.value),
+        accumulo: parseFloat(accumuloEl.value) || 0,
+        prezzoListino: currentCalc.prezzoListino,
+        provvigione: currentCalc.provvigione,
+        margine: currentCalc.margine,
+        ritenuta: currentCalc.ritenuta,
+        flusso: currentCalc.flusso
+      };
+
+      // Invia in POST a /genera_pdf (endpoint Flask) per ottenere il PDF come download
+      fetch('/genera_pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(resp => {
+        if (!resp.ok) throw new Error('Errore nel server');
+        return resp.blob();
+      })
+      .then(blob => {
+        // Forza il download del file PDF
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Preventivo_${payload.nome}_${payload.cognome}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Errore nella generazione del PDF: ' + err.message);
+      });
+    });
+  </script>
 </body>
 </html>
