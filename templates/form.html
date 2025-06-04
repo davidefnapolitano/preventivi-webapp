@@ -25,9 +25,6 @@
   <div class="container">
     <h1>Genera Preventivo Fotovoltaico</h1>
 
-    <!-- MESSAGGI FLASH -->
-    <div id="flash-message" class="hidden"></div>
-
     <!-- FORM PRINCIPALE -->
     <form id="preventivo-form" onsubmit="return false;">
       <!-- 1. Nome Cliente -->
@@ -58,16 +55,24 @@
         <!-- Opzioni popolate dinamicamente da JS -->
       </select>
 
-      <!-- 6. Provvigione (%) con default 6 -->
+      <!-- 6. Installazione: Sì/No -->
+      <label for="installazione">Installazione</label>
+      <select id="installazione" name="installazione" required>
+        <option value="si">Sì (con installazione)</option>
+        <option value="no">No, solo fornitura</option>
+      </select>
+      <p class="note">Se selezioni “No, solo fornitura”, il costo di installazione verrà escluso.</p>
+
+      <!-- 7. Provvigione (%) con default 6 -->
       <label for="provvigione">Provvigione (%) <span class="note">(default 6%)</span></label>
       <input type="number" id="provvigione" name="provvigione" placeholder="6" min="0" max="100" step="0.1" />
 
-      <!-- 7. Bottone per il calcolo -->
+      <!-- 8. Bottone per il calcolo -->
       <button id="calcolaBtn">Calcola Preventivo</button>
     </form>
 
 
-    <!-- 8. SEZIONE RISULTATI (nascosta fino a Calcola) -->
+    <!-- 9. SEZIONE RISULTATI (nascosta fino a Calcola) -->
     <div id="risultati" class="results hidden">
       <div class="result-item">
         <span class="result-label">Potenza Impianto:</span>
@@ -80,6 +85,10 @@
       <div class="result-item">
         <span class="result-label">Tipo di Fase:</span>
         <span class="result-value" id="display-tipologia">-</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Installazione:</span>
+        <span class="result-value" id="display-installazione">-</span>
       </div>
       <hr>
       <div class="result-item">
@@ -109,14 +118,14 @@
     </div>
 
 
-    <!-- 9. SEZIONE SCONTO (nascosta finché non calcoli) -->
+    <!-- 10. SEZIONE SCONTO (nascosta finché non calcoli) -->
     <div id="sconto-section" class="discount-section hidden">
       <label for="sconto">Applica Sconto (%)</label>
       <input type="number" id="sconto" name="sconto" placeholder="0" min="0" max="100" step="0.1" />
       <button id="applicaScontoBtn">Aggiorna</button>
     </div>
 
-    <!-- 10. Bottone per Generare il PDF (nascosto finché non calcoli) -->
+    <!-- 11. Bottone per Generare il PDF (nascosto finché non calcoli) -->
     <button id="generaPdfBtn" class="hidden">Genera Preventivo PDF</button>
   </div>
 
@@ -170,27 +179,29 @@
     };
 
     // --- ELEMENTI DEL DOM ---
-    const tipologiaEl    = document.getElementById('tipologia');
-    const tagliaEl       = document.getElementById('taglia');
-    const accumuloEl     = document.getElementById('accumulo');
-    const provvigioneEl  = document.getElementById('provvigione');
-    const calcolaBtn     = document.getElementById('calcolaBtn');
-    const risultatiDiv   = document.getElementById('risultati');
-    const scontoSection  = document.getElementById('sconto-section');
-    const scontoEl       = document.getElementById('sconto');
+    const tipologiaEl      = document.getElementById('tipologia');
+    const tagliaEl         = document.getElementById('taglia');
+    const accumuloEl       = document.getElementById('accumulo');
+    const installazioneEl  = document.getElementById('installazione'); // NOVITÀ
+    const provvigioneEl    = document.getElementById('provvigione');
+    const calcolaBtn       = document.getElementById('calcolaBtn');
+    const risultatiDiv     = document.getElementById('risultati');
+    const scontoSection    = document.getElementById('sconto-section');
+    const scontoEl         = document.getElementById('sconto');
     const applicaScontoBtn = document.getElementById('applicaScontoBtn');
-    const generaPdfBtn   = document.getElementById('generaPdfBtn');
+    const generaPdfBtn     = document.getElementById('generaPdfBtn');
 
     // Span dove mostriamo i risultati
-    const displayPotenza      = document.getElementById('display-potenza');
-    const displayAccumulo     = document.getElementById('display-accumulo');
-    const displayTipologia    = document.getElementById('display-tipologia');
-    const costoComplessivoEl  = document.getElementById('costo-complessivo');
-    const prezzoListinoEl     = document.getElementById('prezzo-listino');
-    const provvigioneValEl    = document.getElementById('provvigione-val');
-    const margineValEl        = document.getElementById('margine-val');
-    const ritenutaValEl       = document.getElementById('ritenuta-val');
-    const flussoValEl         = document.getElementById('flusso-val');
+    const displayPotenza       = document.getElementById('display-potenza');
+    const displayAccumulo      = document.getElementById('display-accumulo');
+    const displayTipologia     = document.getElementById('display-tipologia');
+    const displayInstallazione = document.getElementById('display-installazione'); // NOVITÀ
+    const costoComplessivoEl   = document.getElementById('costo-complessivo');
+    const prezzoListinoEl      = document.getElementById('prezzo-listino');
+    const provvigioneValEl     = document.getElementById('provvigione-val');
+    const margineValEl         = document.getElementById('margine-val');
+    const ritenutaValEl        = document.getElementById('ritenuta-val');
+    const flussoValEl          = document.getElementById('flusso-val');
 
     // Variabili globali per i risultati correnti
     let currentCalc = {
@@ -257,12 +268,13 @@
     // --- CALCOLO DEL PREVENTIVO ---
     calcolaBtn.addEventListener('click', () => {
       // 1. Valori di input
-      const nome = document.getElementById('nome').value.trim();
-      const cognome = document.getElementById('cognome').value.trim();
-      const tipologia = tipologiaEl.value;
-      const potenza = parseFloat(tagliaEl.value);
-      const accumulo = parseFloat(accumuloEl.value);
-      let provvigionePerc = parseFloat(provvigioneEl.value);
+      const nome            = document.getElementById('nome').value.trim();
+      const cognome         = document.getElementById('cognome').value.trim();
+      const tipologia       = tipologiaEl.value;
+      const potenza         = parseFloat(tagliaEl.value);
+      const accumulo        = parseFloat(accumuloEl.value);
+      const installazione   = installazioneEl.value;            // "si" o "no"
+      let provvigionePerc   = parseFloat(provvigioneEl.value);
       if (isNaN(provvigionePerc) || provvigionePerc <= 0) provvigionePerc = 6;
 
       // Validazioni base
@@ -271,7 +283,7 @@
         return;
       }
 
-      // 2. Calcolo COSTO
+      // 2. Calcolo COSTO (escludo installazione se "no")
       let costo = 0;
       // Pannelli
       costo += costData.pannelli[tipologia][potenza] || 0;
@@ -283,21 +295,23 @@
       if (accumulo > 0) {
         costo += costData.accumulo[tipologia][accumulo] || 0;
       }
-      // Installazione
-      const tabInst = (accumulo > 0)
-        ? costData.installazione[tipologia].conAccumulo
-        : costData.installazione[tipologia].noAccumulo;
-      costo += tabInst[potenza] || 0;
+      // Installazione (solo se installazione === "si")
+      if (installazione === "si") {
+        const tabInst = (accumulo > 0)
+          ? costData.installazione[tipologia].conAccumulo
+          : costData.installazione[tipologia].noAccumulo;
+        costo += tabInst[potenza] || 0;
+      }
       // Inverter (ibrido con accumulo, stringa senza)
       const invType = (accumulo > 0) ? 'ibrido' : 'stringa';
       costo += costData.inverter[tipologia][invType][potenza] || 0;
       // Meter
       costo += costData.meter[tipologia][potenza] || 0;
 
-      // 3. Prezzo di Listino (arrot. a 100): (costo+300) * 1.5 * 1.1
+      // 3. Prezzo di Listino (arrotonda a multiplo di 100): (costo+300) * 1.5 * 1.1
       let prezzoListino = roundToMultiple((costo + 300) * 1.5 * 1.1, 100);
 
-      // 4. Ritenuta (solo se residenziale <20 kW). Qui assumiamo sempre residenziale: mettiamo condizione potenza<20
+      // 4. Ritenuta (solo se residenziale <20 kW). Qui assumiamo sempre residenziale
       let ritenuta = 0;
       if (potenza < 20) {
         ritenuta = prezzoListino / 1.22 * 0.11;
@@ -316,20 +330,20 @@
       currentCalc = { costo, prezzoListino, ritenuta, provvigione, margine, flusso };
 
       // 8. Aggiorna la UI
-      displayPotenza.textContent = potenza + ' kW';
-      displayAccumulo.textContent = (accumulo > 0 ? accumulo + ' kWh' : 'Nessuno');
-      displayTipologia.textContent = (tipologia === 'Mono' ? 'Monofase' : 'Trifase');
-      costoComplessivoEl.textContent = costo.toFixed(2) + ' €';
-      prezzoListinoEl.textContent = prezzoListino.toFixed(2) + ' €';
-      provvigioneValEl.textContent = provvigione.toFixed(2) + ' € (' + provvigionePerc.toFixed(1) + '%)';
-      margineValEl.textContent = margine.toFixed(2) + ' €';
-      ritenutaValEl.textContent = ritenuta.toFixed(2) + ' €';
-      flussoValEl.textContent = flusso.toFixed(2) + ' €';
+      displayPotenza.textContent       = potenza + ' kW';
+      displayAccumulo.textContent      = (accumulo > 0 ? accumulo + ' kWh' : 'Nessuno');
+      displayTipologia.textContent     = (tipologia === 'Mono' ? 'Monofase' : 'Trifase');
+      displayInstallazione.textContent = (installazione === 'si' ? 'Sì' : 'No, solo fornitura'); // NOVITÀ
+      costoComplessivoEl.textContent   = costo.toFixed(2) + ' €';
+      prezzoListinoEl.textContent      = prezzoListino.toFixed(2) + ' €';
+      provvigioneValEl.textContent     = provvigione.toFixed(2) + ' € (' + provvigionePerc.toFixed(1) + '%)';
+      margineValEl.textContent         = margine.toFixed(2) + ' €';
+      ritenutaValEl.textContent        = ritenuta.toFixed(2) + ' €';
+      flussoValEl.textContent          = flusso.toFixed(2) + ' €';
 
       risultatiDiv.classList.remove('hidden');
       scontoSection.classList.remove('hidden');
       generaPdfBtn.classList.remove('hidden');
-      document.getElementById('flash-message').classList.add('hidden');
     });
 
     // --- APPLICA SCONTO E RICALCOLO ---
@@ -354,37 +368,38 @@
       let flusso2 = margine2 - ritenuta2;
 
       // Aggiorna i valori
-      prezzoListinoEl.textContent = prezzoScontato.toFixed(2) + ' €';
+      prezzoListinoEl.textContent  = prezzoScontato.toFixed(2) + ' €';
       provvigioneValEl.textContent = provvigione2.toFixed(2) + ' € (' + provvigionePerc.toFixed(1) + '%)';
-      margineValEl.textContent = margine2.toFixed(2) + ' €';
-      ritenutaValEl.textContent = ritenuta2.toFixed(2) + ' €';
-      flussoValEl.textContent = flusso2.toFixed(2) + ' €';
+      margineValEl.textContent     = margine2.toFixed(2) + ' €';
+      ritenutaValEl.textContent    = ritenuta2.toFixed(2) + ' €';
+      flussoValEl.textContent      = flusso2.toFixed(2) + ' €';
 
       // Aggiorna currentCalc
       currentCalc.prezzoListino = prezzoScontato;
-      currentCalc.ritenuta = ritenuta2;
-      currentCalc.provvigione = provvigione2;
-      currentCalc.margine = margine2;
-      currentCalc.flusso = flusso2;
+      currentCalc.ritenuta      = ritenuta2;
+      currentCalc.provvigione   = provvigione2;
+      currentCalc.margine       = margine2;
+      currentCalc.flusso        = flusso2;
     });
 
     // --- PULSANTE PER GENERARE IL PDF ---
     generaPdfBtn.addEventListener('click', () => {
       // Costruisci un payload JSON con tutti i dati
       const payload = {
-        nome: document.getElementById('nome').value.trim(),
-        cognome: document.getElementById('cognome').value.trim(),
-        tipologia: tipologiaEl.value,
-        potenza: parseFloat(tagliaEl.value),
-        accumulo: parseFloat(accumuloEl.value) || 0,
+        nome:        document.getElementById('nome').value.trim(),
+        cognome:     document.getElementById('cognome').value.trim(),
+        tipologia:   tipologiaEl.value,
+        potenza:     parseFloat(tagliaEl.value),
+        accumulo:    parseFloat(accumuloEl.value) || 0,
+        installazione: installazioneEl.value, // NOVITÀ: mandiamo anche questa info se serve nel server
         prezzoListino: currentCalc.prezzoListino,
-        provvigione: currentCalc.provvigione,
-        margine: currentCalc.margine,
-        ritenuta: currentCalc.ritenuta,
-        flusso: currentCalc.flusso
+        provvigione:   currentCalc.provvigione,
+        margine:       currentCalc.margine,
+        ritenuta:      currentCalc.ritenuta,
+        flusso:        currentCalc.flusso
       };
 
-      // Invia in POST a /genera_pdf (endpoint Flask) per ottenere il PDF come download
+      // Invia in POST a /genera_pdf (endpoint Flask)
       fetch('/genera_pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
