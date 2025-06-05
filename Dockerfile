@@ -26,16 +26,15 @@ RUN apt-get update && \
         sudo && \
     rm -rf /var/lib/apt/lists/*
 
-# 4) Scarica il file ZIP di Poppins da Google Fonts (ultima versione)
-#    e lo estrai in /usr/share/fonts/truetype/poppins, quindi aggiorna fc-cache.
+# 4) Scarica e installa Poppins da Google Fonts
+#    Creiamo la cartella per Poppins e scarichiamo i TTF corretti
 RUN mkdir -p /usr/share/fonts/truetype/poppins && \
     cd /usr/share/fonts/truetype/poppins && \
-    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins%5Bwght%5D.ttf -O Poppins-Regular.ttf && \
-    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Bold.ttf -O Poppins-Bold.ttf && \
-    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Italic.ttf -O Poppins-Italic.ttf && \
-    # Altri stili se ti servono (Light, Medium, ecc.), es.:
-    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Light.ttf -O Poppins-Light.ttf && \
-    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Medium.ttf -O Poppins-Medium.ttf && \
+    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Regular.ttf && \
+    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Bold.ttf && \
+    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Italic.ttf && \
+    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Light.ttf && \
+    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Medium.ttf && \
     fc-cache -f -v && \
     cd /
 
