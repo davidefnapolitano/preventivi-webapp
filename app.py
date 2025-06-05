@@ -52,30 +52,35 @@ def cleanup():
 # ------------------------------------------------------------
 # ROUTE AGGIUNTA: genera il PDF a partire dai dati JSON
 # ------------------------------------------------------------
+# … (import, configurazioni e route index/cleanup restano identiche) …
+
+# … (import, configurazioni e route index/cleanup restano identiche) …
+
 @app.route("/genera_pdf", methods=["POST"])
 def genera_pdf():
     try:
         dati = request.get_json(force=True)
 
-        # 1) Scegli template .docx in base al valore di "accumulo"
+        # 1) Scegli quale template .docx usare
         if dati.get("accumulo", 0) > 0:
             tpl_path = TPL_CON_ACCUMULO
         else:
             tpl_path = TPL_SENZA_ACCUMULO
 
-        # 2) Genera un base_name univoco (UUID) per evitare sovrascritture
+        # 2) Genera un base_name univoco (UUID) per i file temporanei
         uid = uuid.uuid4().hex[:8]
         base_name = f"temp_{dati['nome']}_{dati['cognome']}_{uid}"
         nome_docx_out = base_name + ".docx"
         path_docx_out = os.path.join(OUT_DIR, nome_docx_out)
 
         # 3) Prepara il contesto per docxtpl
+        #    NOTA: usiamo "prezzoFormatted" per preservare i punti
         contesto = {
-            "Nome":    dati.get("nome", ""),
-            "Cognome": dati.get("cognome", ""),
-            "Pot":     f"{int(dati.get('potenza', 0))}",
-            "Acc":     f"{int(dati.get('accumulo', 0))}" if dati.get("accumulo", 0) > 0 else "",
-            "Prezzo":  f"{int(dati.get('prezzoListino', 0))}"
+            "Nome":           dati.get("nome", ""),
+            "Cognome":        dati.get("cognome", ""),
+            "Pot":            f"{int(dati.get('potenza', 0))}",
+            "Acc":            f"{int(dati.get('accumulo', 0))}" if dati.get("accumulo", 0) > 0 else "",
+            "Prezzo":         dati.get("prezzoFormatted", "")  # già stringa formattata con “.”
         }
         if "margine" in dati:
             contesto["Margine"] = f"{dati['margine']:.2f}"
@@ -84,12 +89,12 @@ def genera_pdf():
         if "flusso" in dati:
             contesto["Flusso"] = f"{dati['flusso']:.2f}"
 
-        # 4) Renderizza il .docx con docxtpl
+        # 4) Renderizza il .docx
         doc = DocxTemplate(tpl_path)
         doc.render(contesto)
         doc.save(path_docx_out)
 
-        # 5) Converte il .docx in PDF usando LibreOffice headless
+        # 5) Converte il .docx in PDF con LibreOffice headless
         cmd = [
             "libreoffice",
             "--headless",
@@ -107,21 +112,20 @@ def genera_pdf():
         except:
             pass
 
-        # 7) Ora LibreOffice ha creato “temp_<…>.pdf”
-        pdf_generated = base_name + ".pdf"
+        # 7) Leggi il PDF generato (temp_<…>.pdf)
+        pdf_generated     = base_name + ".pdf"
         path_pdf_generated = os.path.join(OUT_DIR, pdf_generated)
 
-        # 8) Leggi i byte del PDF creato
         with open(path_pdf_generated, "rb") as f:
             pdf_bytes = f.read()
 
-        # 9) Rimuovi il PDF temporaneo dalla cartella OUT (opzionale)
+        # 8) Rimuovi il PDF temporaneo (opzionale)
         try:
             os.remove(path_pdf_generated)
         except:
             pass
 
-        # 10) Restituisci il PDF al browser con nome “Preventivo_<…>.pdf”
+        # 9) Invia il PDF al browser con nome “Preventivo_<…>.pdf”
         download_name = f"Preventivo_{dati['nome']}_{dati['cognome']}_{uid}.pdf"
         return send_file(
             io.BytesIO(pdf_bytes),
@@ -133,6 +137,8 @@ def genera_pdf():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
 
 # ------------------------------------------------------------
 # AVVIO in locale (per test)
