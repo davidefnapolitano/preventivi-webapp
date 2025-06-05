@@ -34,8 +34,8 @@ RUN mkdir -p /usr/share/fonts/truetype/poppins && \
     wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Bold.ttf -O Poppins-Bold.ttf && \
     wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Italic.ttf -O Poppins-Italic.ttf && \
     # Altri stili se ti servono (Light, Medium, ecc.), es.:
-    # wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Light.ttf -O Poppins-Light.ttf && \
-    # wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Medium.ttf -O Poppins-Medium.ttf && \
+    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Light.ttf -O Poppins-Light.ttf && \
+    wget -q https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Medium.ttf -O Poppins-Medium.ttf && \
     fc-cache -f -v && \
     cd /
 
