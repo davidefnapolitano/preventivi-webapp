@@ -371,6 +371,13 @@
         alert('Compila tutti i campi obbligatori (Nome, Cognome, Tipologia Cliente/Impianto, Taglia).');
         return;
       }
+
+      // Verifica se accumulo > 0, con inverter deve avere anche Accumulo
+      if (accumulo > 0 && wantInverter && !wantAccumulo) {
+        alert('Hai selezionato un Accumulo > 0 e vuoi un Inverter: devi selezionare anche "Accumulo" tra gli oggetti della fornitura.');
+        return;
+      }
+      
       // Non è possibile selezionare Accumulo senza Inverter
       if (wantAccumulo && !wantInverter) {
         alert('Non è possibile selezionare solo accumulo senza inverter.');
