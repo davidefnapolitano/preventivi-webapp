@@ -154,8 +154,9 @@
       <button id="applicaScontoBtn">Aggiorna</button>
     </div>
 
-    <!-- 13. Bottone per Generare il PDF (nascosto finché non calcoli) -->
+    <!-- 13. Bottoni per Generare il PDF o il DOCX (nascosti finché non calcoli) -->
     <button id="generaPdfBtn" class="hidden">Genera Preventivo PDF</button>
+    <button id="generaDocBtn" class="hidden">Genera Preventivo DOC</button>
   </div>
 
   <!-- ============================= -->
@@ -215,6 +216,7 @@
     const scontoEl           = document.getElementById('sconto');
     const applicaScontoBtn   = document.getElementById('applicaScontoBtn');
     const generaPdfBtn       = document.getElementById('generaPdfBtn');
+    const generaDocBtn       = document.getElementById('generaDocBtn');
     const adminOnlyEls       = document.querySelectorAll('.admin-only');
 
     // Solo l'utente "admin" vede i campi riservati
@@ -485,6 +487,7 @@
       risultatiDiv.classList.remove('hidden');
       scontoSection.classList.remove('hidden');
       generaPdfBtn.classList.remove('hidden');
+      generaDocBtn.classList.remove('hidden');
     });
 
     // --- APPLICA SCONTO E RICALCOLO ---
@@ -566,6 +569,52 @@
       .catch(err => {
         console.error(err);
         alert('Errore nella generazione del PDF: ' + err.message);
+      });
+    });
+
+    // --- PULSANTE PER GENERARE IL DOCX ---
+    generaDocBtn.addEventListener('click', () => {
+      const prezzoFormattato = formattaConPunti(Math.round(currentCalc.prezzoListino));
+      const payload = {
+        nome:             document.getElementById('nome').value.trim(),
+        cognome:          document.getElementById('cognome').value.trim(),
+        tipologiaCliente: tipologiaClienteEl.value,
+        tipologia:        tipologiaEl.value,
+        potenza:          parseFloat(tagliaEl.value),
+        accumulo:         parseFloat(accumuloEl.value) || 0,
+        installazione:    installazioneEl.value,
+        objPannelli:      objPannelliEl.checked,
+        objInverter:      objInverterEl.checked,
+        objAccumulo:      objAccumuloEl.checked,
+        prezzoListino:    currentCalc.prezzoListino,
+        prezzoFormatted:  prezzoFormattato,
+        provvigione:      currentCalc.provvigione,
+        margine:          currentCalc.margine,
+        ritenuta:         currentCalc.ritenuta,
+        flusso:           currentCalc.flusso
+      };
+
+      fetch('/genera_doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(resp => {
+        if (!resp.ok) throw new Error('Errore nel server');
+        return resp.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Preventivo_${payload.nome}_${payload.cognome}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Errore nella generazione del DOCX: ' + err.message);
       });
     });
   </script>
