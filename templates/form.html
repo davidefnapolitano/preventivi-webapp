@@ -26,6 +26,7 @@
 <body>
   <div class="container">
     <h1>Genera Preventivo Fotovoltaico</h1>
+    <p>Utente: {{ username }} - <a href="{{ url_for('logout') }}">Logout</a></p>
 
     <!-- FORM PRINCIPALE -->
     <form id="preventivo-form" onsubmit="return false;">
@@ -119,7 +120,7 @@
         <span class="result-value" id="display-tipologia-cliente">-</span>
       </div>
       <hr>
-      <div class="result-item">
+      <div class="result-item admin-only">
         <span class="result-label">Costo Complessivo:</span>
         <span class="result-value" id="costo-complessivo">-</span>
       </div>
@@ -127,19 +128,19 @@
         <span class="result-label">Prezzo di Listino (IVA 10%):</span>
         <span class="result-value" id="prezzo-listino">-</span>
       </div>
-      <div class="result-item">
+      <div class="result-item admin-only">
         <span class="result-label">Provvigione (€):</span>
         <span class="result-value" id="provvigione-val">-</span>
       </div>
-      <div class="result-item">
+      <div class="result-item admin-only">
         <span class="result-label">Margine (€):</span>
         <span class="result-value" id="margine-val">-</span>
       </div>
-      <div class="result-item">
+      <div class="result-item admin-only">
         <span class="result-label">Ritenuta d’Acconto (€):</span>
         <span class="result-value" id="ritenuta-val">-</span>
       </div>
-      <div class="result-item">
+      <div class="result-item admin-only">
         <span class="result-label">Flusso di Cassa (€):</span>
         <span class="result-value" id="flusso-val">-</span>
       </div>
@@ -161,6 +162,7 @@
   <!-- ====== SCRIPT JAVASCRIPT ==== -->
   <!-- ============================= -->
   <script>
+    const userRole = "{{ role }}";
     // --- DATI PER IL CALCOLO DEI COSTI ---
     const costData = {
       pannelli: {
@@ -213,6 +215,11 @@
     const scontoEl           = document.getElementById('sconto');
     const applicaScontoBtn   = document.getElementById('applicaScontoBtn');
     const generaPdfBtn       = document.getElementById('generaPdfBtn');
+    const adminOnlyEls       = document.querySelectorAll('.admin-only');
+
+    if (userRole !== 'admin') {
+      adminOnlyEls.forEach(el => el.classList.add('hidden'));
+    }
 
     // Span dove mostriamo i risultati
     const displayPotenza           = document.getElementById('display-potenza');
