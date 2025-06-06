@@ -10,6 +10,8 @@
     h1 { text-align: center; margin-bottom: 20px; color: #2c7873; }
     label { display: block; margin-top: 15px; font-weight: bold; }
     input, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+    .checkbox-group { display: flex; gap: 10px; margin-top: 5px; }
+    .checkbox-group input { width: auto; }
     button { margin-top: 20px; width: 100%; padding: 12px; background: #2c7873; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
     button:hover { background: #235d59; }
     .results, .discount-section { margin-top: 25px; padding: 15px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #ff9a3c; }
@@ -35,14 +37,14 @@
       <label for="cognome">Cognome Cliente</label>
       <input type="text" id="cognome" name="cognome" placeholder="Rossi" required />
 
-      <!-- 3. Tipologia Cliente (Novità) -->
+      <!-- 3. Tipologia Cliente (modificata) -->
       <label for="tipologiaCliente">Tipologia Cliente</label>
       <select id="tipologiaCliente" name="tipologiaCliente" required>
         <option value="">-- Seleziona --</option>
         <option value="Privato">Privato</option>
         <option value="Impresa">Impresa</option>
       </select>
-      <p class="note">Se il cliente è “Privato”, la ritenuta d’acconto è dell’11% e la potenza massima è 20 kW; oltre 20 kW diventa Officina Elettrica.</p>
+      <p class="note">Se il cliente è “Privato”, la ritenuta d’acconto è dell’11% e la potenza massima è 20 kW.</p>
 
       <!-- 4. Tipologia di Impianto -->
       <label for="tipologia">Tipologia di Impianto</label>
@@ -52,33 +54,34 @@
         <option value="Tri">Trifase</option>
       </select>
 
-      <!-- 5. Taglia Impianto (dipende da Tipologia e Tipo Cliente) -->
+      <!-- 5. Taglia Impianto (dipende da Tipologia e Tipologia Cliente) -->
       <label for="taglia">Taglia Impianto (kW)</label>
       <select id="taglia" name="taglia" disabled required>
-        <!-- Opzioni popolate dinamicamente da JS -->
+        <!-- Opzioni popolate dinamicamente -->
       </select>
 
       <!-- 6. Capacità Accumulo (dipende da Tipologia) -->
       <label for="accumulo">Capacità Accumulo (kWh)</label>
       <select id="accumulo" name="accumulo" disabled>
-        <!-- Opzioni popolate dinamicamente da JS -->
+        <!-- Opzioni popolate dinamicamente -->
       </select>
 
-      <!-- 7. Pannelli già presenti? (Novità) -->
-      <label for="pannelliPresenti">Pannelli già presenti?</label>
-      <select id="pannelliPresenti" name="pannelliPresenti" required>
-        <option value="no">No, si devono installare</option>
-        <option value="si">Sì, sono già presenti i pannelli per la taglia richiesta</option>
-      </select>
-      <p class="note">Se “Sì”, verranno esclusi dal costo sia i pannelli che lo staffaggio.</p>
-
-      <!-- 8. Installazione: Sì/No -->
+      <!-- 7. Installazione: Sì/No -->
       <label for="installazione">Installazione</label>
       <select id="installazione" name="installazione" required>
         <option value="si">Sì (con installazione)</option>
         <option value="no">No, solo fornitura</option>
       </select>
       <p class="note">Se selezioni “No, solo fornitura”, il costo di installazione verrà escluso.</p>
+
+      <!-- 8. Oggetto della fornitura (nuovo) -->
+      <label>Oggetto della fornitura</label>
+      <div class="checkbox-group">
+        <label><input type="checkbox" id="objPannelli" checked> Pannelli</label>
+        <label><input type="checkbox" id="objInverter" checked> Inverter</label>
+        <label><input type="checkbox" id="objAccumulo" checked> Accumulo</label>
+      </div>
+      <p class="note">Togli il check se non vuoi includere quell’elemento nel preventivo. “Accumulo” è selezionabile solo se hai scelto un valore >0 in “Capacità Accumulo”.</p>
 
       <!-- 9. Provvigione (%) con default 6 -->
       <label for="provvigione">Provvigione (%) <span class="note">(default 6%)</span></label>
@@ -104,12 +107,12 @@
         <span class="result-value" id="display-tipologia">-</span>
       </div>
       <div class="result-item">
-        <span class="result-label">Pannelli già presenti:</span>
-        <span class="result-value" id="display-pannelli-presenti">-</span>
-      </div>
-      <div class="result-item">
         <span class="result-label">Installazione:</span>
         <span class="result-value" id="display-installazione">-</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Oggetto Fornitura:</span>
+        <span class="result-value" id="display-oggetto">-</span>
       </div>
       <div class="result-item">
         <span class="result-label">Tipologia Cliente:</span>
@@ -161,24 +164,8 @@
     // --- DATI PER IL CALCOLO DEI COSTI ---
     const costData = {
       pannelli: {
-        Mono: {
-          3:  7  * 63,    // 7 pannelli  → 441
-          4:  9  * 63,    // 9 pannelli  → 567
-          5:  12 * 63,    // 12 pannelli → 756
-          6:  14 * 63     // 14 pannelli → 882
-        },
-        Tri: {
-          6:  14 * 63,    // 14 pannelli → 882
-          8:  18 * 63,    // 18 pannelli → 1134
-          10: 23 * 63,    // 23 pannelli → 1449
-          15: 34 * 63,    // 34 pannelli → 2142
-          20: 45 * 63,    // 45 pannelli → 2835
-          25: 56 * 63,    // 56 pannelli → 3528
-          30: 67 * 63,    // 67 pannelli → 4221
-          40: 89 * 63,    // 89 pannelli → 5607
-          50: 112 * 63,   // 112 pannelli → 7056
-          60: 134 * 63    // 134 pannelli → 8442
-        }
+        Mono: { 3: 7  * 63, 4: 9  * 63, 5: 12 * 63, 6: 14 * 63 },
+        Tri:  { 6: 14 * 63, 8: 18 * 63, 10: 23 * 63, 15: 34 * 63, 20: 45 * 63, 25: 56 * 63, 30: 67 * 63, 40: 89 * 63, 50: 112 * 63, 60: 134 * 63 }
       },
       numPannelli: {
         Mono: {3: 7, 4: 9, 5: 12, 6: 14},
@@ -193,39 +180,32 @@
         Mono: {0:0, 5:975, 10:1775, 15:2665, 20:3465},
         Tri:  {0:0, 7.5:2135, 10:2625, 12.5:3115, 15:3605, 17.5:4095, 20:4585, 22.5:5075, 25:5565}
       },
-      installazione: {
-        Mono: {
-          noAccumulo: {3:1100,4:1300,5:1500,6:1700},
-          conAccumulo:{3:1350,4:1550,5:1750,6:1950}
-        },
-        Tri: {
-          noAccumulo: {6:1700,8:2100,10:2500,15:3500,20:4500,25:5500,30:6500,40:8500,50:10500,60:12500},
-          conAccumulo:{6:1950,8:2350,10:2750,15:3750,20:4750,25:5750,30:6750,40:8750,50:10750,60:12750}
-        }
-      },
+      // Nota: le tabelle di installazione precedenti non servono più perché usiamo formula
       inverter: {
         Mono: {
-          stringa: {3:350, 4:390, 5:415, 6:431},
-          ibrido:  {3:695, 4:745, 5:765, 6:785}
+          stringa: {3:350,4:390,5:415,6:431},
+          ibrido:  {3:695,4:745,5:765,6:785}
         },
         Tri: {
-          stringa: {6:705,  8:720,  10:731, 15:860, 20:965,  25:1075, 30:1255, 40:1685, 50:1825, 60:1895},
-          ibrido:  {6:1365, 8:1287, 10:1475, 15:1565, 20:2065, 25:2475, 30:2795}
+          stringa: {6:705,8:720,10:731,15:860,20:965,25:1075,30:1255,40:1685,50:1825,60:1895},
+          ibrido:  {6:1365,8:1287,10:1475,15:1565,20:2065,25:2475,30:2795}
         }
       },
       meter: {
-        Mono: {3:50, 4:50, 5:50, 6:50},
-        Tri:  {6:119, 8:119, 10:119, 15:119, 20:119, 25:159, 30:159, 40:159, 50:159, 60:159}
+        Mono: {3:50,4:50,5:50,6:50},
+        Tri:  {6:119,8:119,10:119,15:119,20:119,25:159,30:159,40:159,50:159,60:159}
       }
     };
 
     // --- ELEMENTI DEL DOM ---
-    const tipologiaClienteEl = document.getElementById('tipologiaCliente'); // Novità
+    const tipologiaClienteEl = document.getElementById('tipologiaCliente');
     const tipologiaEl        = document.getElementById('tipologia');
     const tagliaEl           = document.getElementById('taglia');
     const accumuloEl         = document.getElementById('accumulo');
-    const pannelliPresentiEl = document.getElementById('pannelliPresenti'); // Novità
     const installazioneEl    = document.getElementById('installazione');
+    const objPannelliEl      = document.getElementById('objPannelli');
+    const objInverterEl      = document.getElementById('objInverter');
+    const objAccumuloEl      = document.getElementById('objAccumulo');
     const provvigioneEl      = document.getElementById('provvigione');
     const calcolaBtn         = document.getElementById('calcolaBtn');
     const risultatiDiv       = document.getElementById('risultati');
@@ -238,9 +218,9 @@
     const displayPotenza           = document.getElementById('display-potenza');
     const displayAccumulo          = document.getElementById('display-accumulo');
     const displayTipologia         = document.getElementById('display-tipologia');
-    const displayPannelliPresenti  = document.getElementById('display-pannelli-presenti');
     const displayInstallazione     = document.getElementById('display-installazione');
-    const displayTipologiaCliente  = document.getElementById('display-tipologia-cliente'); // Novità
+    const displayOggetto           = document.getElementById('display-oggetto');
+    const displayTipologiaCliente  = document.getElementById('display-tipologia-cliente');
     const costoComplessivoEl       = document.getElementById('costo-complessivo');
     const prezzoListinoEl          = document.getElementById('prezzo-listino');
     const provvigioneValEl         = document.getElementById('provvigione-val');
@@ -268,7 +248,6 @@
 
     // --- UTILITY: formatta numero con separatore punti per migliaia ---
     function formattaConPunti(x) {
-      // x è un numero intero. Restituisce stringa con separatore:
       return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     }
 
@@ -277,7 +256,7 @@
       const tCliente = tipologiaClienteEl.value;
       const t = tipologiaEl.value;
 
-      // Se non ho ancora scelto tipologiaCliente, disabilito tutto
+      // Se non ho ancora selezionato tipologiaCliente, disabilito tutto
       if (!tCliente) {
         tipologiaEl.disabled = true;
         tagliaEl.innerHTML = '';
@@ -286,11 +265,10 @@
         accumuloEl.disabled = true;
         return;
       } else {
-        // Una volta scelto Privato/Impresa, abilito la scelta di tipologiaImpianto
         tipologiaEl.disabled = false;
       }
 
-      // Se tipologiaImpianto non selezionata, disabilito gli altri
+      // Se tipologiaImpianto non selezionata, disabilito Taglia/Accumulo
       if (!t) {
         tagliaEl.innerHTML = '';
         tagliaEl.disabled = true;
@@ -299,7 +277,7 @@
         return;
       }
 
-      // Ora posso popolare “Taglia” in base a tCliente e t
+      // Popolo “Taglia” a seconda di tCliente e t
       tagliaEl.disabled = false;
       tagliaEl.innerHTML = '';
       accumuloEl.disabled = false;
@@ -310,15 +288,12 @@
       opTag.textContent = '-- Seleziona --';
       tagliaEl.appendChild(opTag);
 
-      // Definiamo le taglie possibili
       let taglie;
       if (tCliente === 'Privato') {
-        // Privato può scegliere solo fino a 20 kW
         taglie = (t === 'Mono') 
           ? [3,4,5,6] 
-          : [6,8,10,15,20];
-      } else {
-        // Impresa può selezionare qualsiasi taglia
+          : [6,8,10,15,20];  // max 20 per Privato
+      } else { 
         taglie = (t === 'Mono')
           ? [3,4,5,6]
           : [6,8,10,15,20,25,30,40,50,60];
@@ -331,14 +306,16 @@
         tagliaEl.appendChild(o);
       });
 
-      // Accumulo: la logica rimane invariata (dipende solo da t)
+      // Popolo “Accumulo” (dipende solo da t)
       let opAcc = document.createElement('option');
       opAcc.value = 0;
       opAcc.textContent = 'Nessun accumulo';
       accumuloEl.appendChild(opAcc);
+
       const accs = (t === 'Mono') 
         ? [5,10,15,20] 
         : [7.5,10,12.5,15,17.5,20,22.5,25];
+
       accs.forEach(kWh => {
         let o = document.createElement('option');
         o.value = kWh;
@@ -347,70 +324,114 @@
       });
     }
 
-    // Quando cambio “Tipologia Cliente” o “Tipologia Impianto”, ricreo i dropdown
-    tipologiaClienteEl.addEventListener('change', aggiornaDropdowns);
-    tipologiaEl.addEventListener('change', aggiornaDropdowns);
+    // Se cambia TipologiaCliente o Tipologia, aggiorno dropdown
+    tipologiaClienteEl.addEventListener('change', () => {
+      aggiornaDropdowns();
+      // Resetto “Oggetto Fornitura” se viene cambiato il cliente
+      objPannelliEl.checked = true;
+      objInverterEl.checked = true;
+      objAccumuloEl.checked = true;
+      objAccumuloEl.disabled = true;
+    });
+    tipologiaEl.addEventListener('change', () => {
+      aggiornaDropdowns();
+      objAccumuloEl.checked = true;
+      objAccumuloEl.disabled = true;
+    });
+
+    // Quando cambio “Accumulo” >0 abilito/disabilito checkbox Accumulo
+    accumuloEl.addEventListener('change', () => {
+      if (parseFloat(accumuloEl.value) > 0) {
+        objAccumuloEl.disabled = false;
+        objAccumuloEl.checked = true;
+      } else {
+        objAccumuloEl.disabled = true;
+        objAccumuloEl.checked = false;
+      }
+    });
 
     // --- CALCOLO DEL PREVENTIVO ---
     calcolaBtn.addEventListener('click', () => {
       // 1. Valori di input
-      const nome            = document.getElementById('nome').value.trim();
-      const cognome         = document.getElementById('cognome').value.trim();
-      const tipologiaCliente= tipologiaClienteEl.value;  // Privato o Impresa
-      const tipologia       = tipologiaEl.value;         // Mono o Tri
-      const potenza         = parseFloat(tagliaEl.value);
-      const accumulo        = parseFloat(accumuloEl.value);
-      const pannelliPresenti= pannelliPresentiEl.value;  // "si" o "no"
-      const installazione   = installazioneEl.value;     // "si" o "no"
-      let provvigionePerc   = parseFloat(provvigioneEl.value);
+      const nome              = document.getElementById('nome').value.trim();
+      const cognome           = document.getElementById('cognome').value.trim();
+      const tipologiaCliente  = tipologiaClienteEl.value;   // Privato/Impresa
+      const tipologia         = tipologiaEl.value;          // Mono/Tri
+      const potenza           = parseFloat(tagliaEl.value);
+      const accumulo          = parseFloat(accumuloEl.value);
+      const installazione     = installazioneEl.value;      // "si"/"no"
+      const wantPannelli      = objPannelliEl.checked;
+      const wantInverter      = objInverterEl.checked;
+      const wantAccumulo      = objAccumuloEl.checked;
+      let provvigionePerc     = parseFloat(provvigioneEl.value);
       if (isNaN(provvigionePerc) || provvigionePerc <= 0) provvigionePerc = 6;
 
       // Validazioni base
       if (!nome || !cognome || !tipologiaCliente || !tipologia || isNaN(potenza)) {
-        alert('Compila tutti i campi obbligatori (Nome, Cognome, Tipologia Cliente, Tipologia Impianto, Taglia).');
+        alert('Compila tutti i campi obbligatori (Nome, Cognome, Tipologia Cliente/Impianto, Taglia).');
+        return;
+      }
+      // Non è possibile selezionare Accumulo senza Inverter
+      if (wantAccumulo && !wantInverter) {
+        alert('Non è possibile selezionare solo accumulo senza inverter.');
         return;
       }
 
-      // 2. Calcolo COSTO (rispetto ai nuovi parametri)
+      // 2. Calcolo COSTO complessivo
       let costo = 0;
 
-      // 2.a) Pannelli (esclusi se pannelliPresenti==="si")
-      if (pannelliPresenti === "no") {
+      // 2.a) Pannelli
+      if (wantPannelli) {
         costo += costData.pannelli[tipologia][potenza] || 0;
       }
 
-      // 2.b) Quadri (sempre inclusi)
-      costo += costData.quadri[tipologia][potenza] || 0;
+      // 2.b) Quadri: sempre incluso se l’oggetto “Inverter” o “Accumulo” è selezionato
+      if (wantInverter || wantAccumulo) {
+        costo += costData.quadri[tipologia][potenza] || 0;
+      }
 
-      // 2.c) Staffaggio (incluso solo se pannelliPresenti==="no")
-      if (pannelliPresenti === "no") {
+      // 2.c) Staffaggio
+      if (wantPannelli) {
         costo += costData.staffaggio[potenza] || 0;
       }
 
-      // 2.d) Accumulo (se accumulo>0)
-      if (accumulo > 0) {
+      // 2.d) Accumulo  
+      if (wantAccumulo) {
         costo += costData.accumulo[tipologia][accumulo] || 0;
       }
 
-      // 2.e) Installazione (solo se installazione==="si")
-      if (installazione === "si") {
-        const tabInst = (accumulo > 0)
-          ? costData.installazione[tipologia].conAccumulo
-          : costData.installazione[tipologia].noAccumulo;
-        costo += tabInst[potenza] || 0;
+      // 2.e) Inverter  
+      if (wantInverter) {
+        const invType = wantAccumulo ? 'ibrido' : 'stringa';
+        costo += costData.inverter[tipologia][invType][potenza] || 0;
+        // Meter va sempre sommato se c'è inverter (o accumulo)
+        costo += costData.meter[tipologia][potenza] || 0;
       }
 
-      // 2.f) Inverter (ibrido con accumulo, stringa senza)
-      const invType = (accumulo > 0) ? 'ibrido' : 'stringa';
-      costo += costData.inverter[tipologia][invType][potenza] || 0;
-
-      // 2.g) Meter (sempre incluso)
-      costo += costData.meter[tipologia][potenza] || 0;
+      // 2.f) Installazione: se “si”, applico la nuova formula  
+      let costoInstallazione = 0;
+      if (installazione === "si") {
+        // 200 €/kW
+        costoInstallazione += 200 * potenza;
+        // 300 € per installazione inverter (se selezionato)
+        if (wantInverter) {
+          costoInstallazione += 300;
+        }
+        // 250 € per installazione accumulo (se selezionato)
+        if (wantAccumulo) {
+          costoInstallazione += 250;
+        }
+        // 200 € cavi (se selezionato almeno un oggetto diverso da “Pannelli”)
+        if (wantInverter || wantAccumulo) {
+          costoInstallazione += 200;
+        }
+      }
+      costo += costoInstallazione;
 
       // 3. Prezzo di Listino (arrotonda a multiplo di 100): (costo+300) * 1.5 * 1.1
       let prezzoListino = roundToMultiple((costo + 300) * 1.5 * 1.1, 100);
 
-      // 4. Ritenuta (se Privato e potenza<20, ritenuta=prezzo/1.22*0.11; se Impresa, 0)
+      // 4. Ritenuta d’Acconto  
       let ritenuta = 0;
       if (tipologiaCliente === "Privato" && potenza < 20) {
         ritenuta = prezzoListino / 1.22 * 0.11;
@@ -425,16 +446,20 @@
       // 7. Flusso di cassa = margine - ritenuta
       let flusso = margine - ritenuta;
 
-      // Salva i risultati globali
+      // Salvo i risultati
       currentCalc = { costo, prezzoListino, ritenuta, provvigione, margine, flusso };
 
-      // 8. Aggiorna la UI
+      // 8. Aggiorno la UI
       displayPotenza.textContent           = potenza + ' kW';
-      displayAccumulo.textContent          = (accumulo > 0 ? accumulo + ' kWh' : 'Nessuno');
+      displayAccumulo.textContent          = (wantAccumulo ? accumulo + ' kWh' : 'Nessuno');
       displayTipologia.textContent         = (tipologia === 'Mono' ? 'Monofase' : 'Trifase');
-      displayPannelliPresenti.textContent  = (pannelliPresenti === 'si' ? 'Sì' : 'No');
       displayInstallazione.textContent     = (installazione === 'si' ? 'Sì' : 'No');
-      displayTipologiaCliente.textContent  = (tipologiaCliente === 'Privato' ? 'Privato' : 'Impresa');
+      let oggettoArr = [];
+      if (wantPannelli) oggettoArr.push('Pannelli');
+      if (wantInverter) oggettoArr.push('Inverter');
+      if (wantAccumulo) oggettoArr.push('Accumulo');
+      displayOggetto.textContent           = oggettoArr.join(', ');
+      displayTipologiaCliente.textContent  = tipologiaCliente;
       costoComplessivoEl.textContent       = formattaConPunti(Math.round(costo)) + ' €';
       prezzoListinoEl.textContent          = formattaConPunti(Math.round(prezzoListino)) + ' €';
       provvigioneValEl.textContent         = formattaConPunti(Math.round(provvigione)) + ' € (' + provvigionePerc.toFixed(1) + '%)';
@@ -457,26 +482,24 @@
       // Prezzo scontato: arrotonda per difetto al multiplo di 50
       let prezzoScontato = floorToMultiple(currentCalc.prezzoListino * (1 - scontoPerc / 100), 50);
 
-      // Ricalcola ritenuta, provvigione, margine, flusso col nuovo prezzo
+      // Ricalcolo ritenuta, provvigione, margine, flusso  
       const potenza = parseFloat(tagliaEl.value);
       const tipologiaCliente = tipologiaClienteEl.value;
       let ritenuta2 = 0;
       if (tipologiaCliente === "Privato" && potenza < 20) {
         ritenuta2 = prezzoScontato / 1.22 * 0.11;
       }
-      const provvigionePerc = parseFloat(provvigioneEl.value) > 0 ? parseFloat(provvigioneEl.value) : 6;
+      let provvigionePerc = parseFloat(provvigioneEl.value) > 0 ? parseFloat(provvigioneEl.value) : 6;
       let provvigione2 = roundToMultiple((prezzoScontato / 1.1) * (provvigionePerc / 100), 10);
-      let margine2 = prezzoScontato / 1.1 - provvigione2 - currentCalc.costo;
-      let flusso2 = margine2 - ritenuta2;
+      let margine2     = prezzoScontato / 1.1 - provvigione2 - currentCalc.costo;
+      let flusso2      = margine2 - ritenuta2;
 
-      // Aggiorna i valori
       prezzoListinoEl.textContent  = formattaConPunti(Math.round(prezzoScontato)) + ' €';
       provvigioneValEl.textContent = formattaConPunti(Math.round(provvigione2)) + ' € (' + provvigionePerc.toFixed(1) + '%)';
       margineValEl.textContent     = formattaConPunti(Math.round(margine2)) + ' €';
       ritenutaValEl.textContent    = formattaConPunti(Math.round(ritenuta2)) + ' €';
       flussoValEl.textContent      = formattaConPunti(Math.round(flusso2)) + ' €';
 
-      // Aggiorna currentCalc
       currentCalc.prezzoListino = prezzoScontato;
       currentCalc.ritenuta      = ritenuta2;
       currentCalc.provvigione   = provvigione2;
@@ -486,23 +509,25 @@
 
     // --- PULSANTE PER GENERARE IL PDF ---
     generaPdfBtn.addEventListener('click', () => {
-      // Costruisci un payload JSON con i dati, includendo la stringa formattata di prezzo
+      // Costruisco il payload JSON (includo "prezzoFormatted")
       const prezzoFormattato = formattaConPunti(Math.round(currentCalc.prezzoListino));
       const payload = {
-        nome:            document.getElementById('nome').value.trim(),
-        cognome:         document.getElementById('cognome').value.trim(),
+        nome:             document.getElementById('nome').value.trim(),
+        cognome:          document.getElementById('cognome').value.trim(),
         tipologiaCliente: tipologiaClienteEl.value,
-        tipologia:       tipologiaEl.value,
-        potenza:         parseFloat(tagliaEl.value),
-        accumulo:        parseFloat(accumuloEl.value) || 0,
-        pannelliPresenti:pannelliPresentiEl.value,
-        installazione:   installazioneEl.value,
-        prezzoListino:   currentCalc.prezzoListino,      // Passiamo ancora il numero intero per i calcoli server‐side
-        prezzoFormatted: prezzoFormattato,               // Inviamo la stringa con i punti
-        provvigione:     currentCalc.provvigione,
-        margine:         currentCalc.margine,
-        ritenuta:        currentCalc.ritenuta,
-        flusso:          currentCalc.flusso
+        tipologia:        tipologiaEl.value,
+        potenza:          parseFloat(tagliaEl.value),
+        accumulo:         parseFloat(accumuloEl.value) || 0,
+        installazione:    installazioneEl.value,
+        objPannelli:      objPannelliEl.checked,
+        objInverter:      objInverterEl.checked,
+        objAccumulo:      objAccumuloEl.checked,
+        prezzoListino:    currentCalc.prezzoListino,
+        prezzoFormatted:  prezzoFormattato,
+        provvigione:      currentCalc.provvigione,
+        margine:          currentCalc.margine,
+        ritenuta:         currentCalc.ritenuta,
+        flusso:           currentCalc.flusso
       };
 
       fetch('/genera_pdf', {
