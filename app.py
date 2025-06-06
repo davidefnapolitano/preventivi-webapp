@@ -29,9 +29,11 @@ app = Flask(__name__)
 app.secret_key = 'f97b1e6c3a4f4d1e8b7c2a8e0d3abb12'
 
 # Semplice archivio di credenziali (username: {password, role})
+# L'utente con ruolo "admin" vede tutte le informazioni, mentre quello con
+# ruolo "utente" visualizza un set ridotto di dati.
 USERS = {
     "admin": {"password": "adminpass", "role": "admin"},
-    "utente": {"password": "userpass", "role": "user"},
+    "utente": {"password": "userpass", "role": "utente"},
 }
 
 BASE_DIR        = os.path.abspath(os.path.dirname(__file__))

@@ -128,7 +128,7 @@
         <span class="result-label">Prezzo di Listino (IVA 10%):</span>
         <span class="result-value" id="prezzo-listino">-</span>
       </div>
-      <div class="result-item admin-only">
+      <div class="result-item">
         <span class="result-label">Provvigione (€):</span>
         <span class="result-value" id="provvigione-val">-</span>
       </div>
@@ -136,11 +136,11 @@
         <span class="result-label">Margine (€):</span>
         <span class="result-value" id="margine-val">-</span>
       </div>
-      <div class="result-item admin-only">
+      <div class="result-item">
         <span class="result-label">Ritenuta d’Acconto (€):</span>
         <span class="result-value" id="ritenuta-val">-</span>
       </div>
-      <div class="result-item admin-only">
+      <div class="result-item">
         <span class="result-label">Flusso di Cassa (€):</span>
         <span class="result-value" id="flusso-val">-</span>
       </div>
@@ -217,6 +217,7 @@
     const generaPdfBtn       = document.getElementById('generaPdfBtn');
     const adminOnlyEls       = document.querySelectorAll('.admin-only');
 
+    // Solo l'utente "admin" vede i campi riservati
     if (userRole !== 'admin') {
       adminOnlyEls.forEach(el => el.classList.add('hidden'));
     }
