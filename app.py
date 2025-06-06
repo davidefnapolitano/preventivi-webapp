@@ -7,7 +7,17 @@ import subprocess
 import io
 import traceback
 
-from flask import Flask, render_template, request, send_file, flash, redirect, url_for, jsonify
+from flask import (
+    Flask,
+    render_template,
+    request,
+    send_file,
+    flash,
+    redirect,
+    url_for,
+    jsonify,
+    session,
+)
 from docxtpl import DocxTemplate
 
 # ------------------------------------------------------------
@@ -17,6 +27,14 @@ from docxtpl import DocxTemplate
 app = Flask(__name__)
 # Inserisci qui la tua chiave segreta generata, ad es. con os.urandom o uuid
 app.secret_key = 'f97b1e6c3a4f4d1e8b7c2a8e0d3abb12'
+
+# Semplice archivio di credenziali (username: {password, role})
+# L'utente con ruolo "admin" vede tutte le informazioni, mentre quello con
+# ruolo "utente" visualizza un set ridotto di dati.
+USERS = {
+    "admin": {"password": "adminpass", "role": "admin"},
+    "utente": {"password": "userpass", "role": "utente"},
+}
 
 BASE_DIR        = os.path.abspath(os.path.dirname(__file__))
 TEMPLATES_DOCX  = os.path.join(BASE_DIR, "templates_docx")
@@ -34,7 +52,38 @@ os.makedirs(OUT_DIR, exist_ok=True)
 # ------------------------------------------------------------
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("form.html")
+    if "username" not in session:
+        return redirect(url_for("login"))
+    return render_template(
+        "form.html",
+        username=session.get("username"),
+        role=session.get("role"),
+    )
+
+# ------------------------------------------------------------
+# ROUTE LOGIN
+# ------------------------------------------------------------
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        user = USERS.get(username)
+        if user and user["password"] == password:
+            session["username"] = username
+            session["role"] = user["role"]
+            return redirect(url_for("index"))
+        flash("Credenziali non valide", "error")
+    return render_template("login.html")
+
+
+# ------------------------------------------------------------
+# ROUTE LOGOUT
+# ------------------------------------------------------------
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 # ------------------------------------------------------------
 # ROUTE OPZIONALE: pulizia cartella out
