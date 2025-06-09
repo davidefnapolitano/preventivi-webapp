@@ -92,17 +92,29 @@ def generate_nc() -> str:
 def get_sheet():
     """Return the first worksheet of the configured Google Sheet."""
     creds_info = os.environ.get("GOOGLE_SERVICE_ACCOUNT_INFO")
+    creds = None
     if creds_info:
+        service_dict = None
+        parse_errors = []
         try:
             service_dict = json.loads(creds_info)
-        except json.JSONDecodeError:
-            # Some platforms require the JSON to be base64 encoded
+        except json.JSONDecodeError as e:
+            parse_errors.append(str(e))
             try:
                 decoded = base64.b64decode(creds_info).decode("utf-8")
                 service_dict = json.loads(decoded)
-            except Exception as e:
-                raise RuntimeError(f"Invalid GOOGLE_SERVICE_ACCOUNT_INFO: {e}")
-        creds = Credentials.from_service_account_info(service_dict, scopes=SCOPES)
+            except Exception as e2:
+                parse_errors.append(str(e2))
+                raise RuntimeError(
+                    "Invalid GOOGLE_SERVICE_ACCOUNT_INFO; provide valid JSON or "
+                    f"base64 encoded JSON. Errors: {', '.join(parse_errors)}"
+                )
+        try:
+            creds = Credentials.from_service_account_info(
+                service_dict, scopes=SCOPES
+            )
+        except Exception as e:
+            raise RuntimeError(f"Invalid service account info: {e}")
     else:
         cred_file = SERVICE_ACCOUNT_FILE
         if not os.path.exists(cred_file):
@@ -110,12 +122,20 @@ def get_sheet():
                 "Google Sheets credentials not found. "
                 "Set GOOGLE_SERVICE_ACCOUNT_INFO or GOOGLE_SERVICE_ACCOUNT_FILE"
             )
-        creds = Credentials.from_service_account_file(cred_file, scopes=SCOPES)
+        try:
+            creds = Credentials.from_service_account_file(cred_file, scopes=SCOPES)
+        except Exception as e:
+            raise RuntimeError(
+                f"Invalid service account file '{cred_file}': {e}"
+            )
     try:
         gc = gspread.authorize(creds)
         sh = gc.open_by_key(GOOGLE_SHEET_ID)
     except Exception as e:
-        raise RuntimeError(f"Google Sheets authentication failed: {e}")
+        raise RuntimeError(
+            f"Google Sheets authentication failed: {e}. "
+            "Verify your service account credentials."
+        )
     return sh.sheet1
 
 # ------------------------------------------------------------
@@ -269,7 +289,39 @@ def genera_pdf():
         )
         response.headers["X-NC"] = nc_code
         return response
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
+# ------------------------------------------------------------
+# ROUTE PER SALVARE I DATI NEL GOOGLE SHEET
+# ------------------------------------------------------------
+@app.route("/salva_sheet", methods=["POST"])
+def salva_sheet_handler():
+    try:
+        dati = request.get_json(force=True)
+        sheet = get_sheet()
+        row = [
+            dati.get("nc"),
+            dati.get("nome"),
+            dati.get("cognome"),
+            dati.get("tipologiaCliente"),
+            dati.get("tipologia"),
+            dati.get("potenza"),
+            dati.get("accumulo"),
+            dati.get("np"),
+            dati.get("installazione"),
+            dati.get("tetto"),
+            dati.get("oggettoFornitura"),
+            dati.get("prezzoListino"),
+            dati.get("prezzoScontato"),
+            dati.get("provvigione"),
+            dati.get("margine"),
+            dati.get("ritenuta"),
+            dati.get("flusso"),
+        ]
+        sheet.append_row(row, value_input_option="USER_ENTERED")
+        return jsonify({"status": "ok"})
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
