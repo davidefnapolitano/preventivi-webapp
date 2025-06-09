@@ -46,6 +46,12 @@ OUT_DIR         = os.path.join(BASE_DIR, "out")
 # Percorsi ai file .docx template (verifica che i nomi siano esatti)
 TPL_SENZA_ACCUMULO = os.path.join(TEMPLATES_DOCX, "template_senza_accumulo.docx")
 TPL_CON_ACCUMULO   = os.path.join(TEMPLATES_DOCX, "template_con_accumulo.docx")
+TPL_SENZA_ACCUMULO_WALLBOX = os.path.join(
+    TEMPLATES_DOCX, "template_senza_accumulo_wallbox.docx"
+)
+TPL_CON_ACCUMULO_WALLBOX = os.path.join(
+    TEMPLATES_DOCX, "template_con_accumulo_wallbox.docx"
+)
 
 # Crea la cartella OUT se non esiste
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -141,10 +147,17 @@ def genera_pdf():
         dati = request.get_json(force=True)
 
         # 1) Scegli quale template .docx usare
-        if dati.get("accumulo", 0) > 0:
-            tpl_path = TPL_CON_ACCUMULO
+        want_wallbox = dati.get("objColonnina", False)
+        if want_wallbox:
+            if dati.get("accumulo", 0) > 0:
+                tpl_path = TPL_CON_ACCUMULO_WALLBOX
+            else:
+                tpl_path = TPL_SENZA_ACCUMULO_WALLBOX
         else:
-            tpl_path = TPL_SENZA_ACCUMULO
+            if dati.get("accumulo", 0) > 0:
+                tpl_path = TPL_CON_ACCUMULO
+            else:
+                tpl_path = TPL_SENZA_ACCUMULO
 
         # 2) Genera un base_name univoco (UUID) per i file temporanei
         uid = uuid.uuid4().hex[:8]
@@ -231,10 +244,17 @@ def genera_doc():
         dati = request.get_json(force=True)
 
         # 1) Scegli quale template .docx usare
-        if dati.get("accumulo", 0) > 0:
-            tpl_path = TPL_CON_ACCUMULO
+        want_wallbox = dati.get("objColonnina", False)
+        if want_wallbox:
+            if dati.get("accumulo", 0) > 0:
+                tpl_path = TPL_CON_ACCUMULO_WALLBOX
+            else:
+                tpl_path = TPL_SENZA_ACCUMULO_WALLBOX
         else:
-            tpl_path = TPL_SENZA_ACCUMULO
+            if dati.get("accumulo", 0) > 0:
+                tpl_path = TPL_CON_ACCUMULO
+            else:
+                tpl_path = TPL_SENZA_ACCUMULO
 
         # 2) Genera un base_name univoco (UUID) per i file temporanei
         uid = uuid.uuid4().hex[:8]
