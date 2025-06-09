@@ -240,19 +240,6 @@
     const generaDocBtn       = document.getElementById('generaDocBtn');
     const adminOnlyEls       = document.querySelectorAll('.admin-only');
 
-    // Solo l'utente "admin" vede i campi riservati
-    if (userRole !== 'admin') {
-      adminOnlyEls.forEach(el => el.classList.add('hidden'));
-    }
-    if (withCustomer) {
-      rowProvvigione.classList.add('hidden');
-      rowFlusso.classList.add('hidden');
-      if (userRole === 'admin') {
-        rowMargine.classList.add('hidden');
-        rowCosto.classList.add('hidden');
-      }
-    }
-
     // Span dove mostriamo i risultati
     const displayPotenza           = document.getElementById('display-potenza');
     const displayAccumulo          = document.getElementById('display-accumulo');
@@ -273,6 +260,20 @@
     const rowFlusso                = document.getElementById('row-flusso');
     const rowMargine               = document.getElementById('row-margine');
     const rowCosto                 = document.getElementById('row-costo');
+
+
+    // Solo l'utente "admin" vede i campi riservati
+    if (userRole !== 'admin') {
+      adminOnlyEls.forEach(el => el.classList.add('hidden'));
+    }
+    if (withCustomer) {
+      rowProvvigione.classList.add('hidden');
+      rowFlusso.classList.add('hidden');
+      if (userRole === 'admin') {
+        rowMargine.classList.add('hidden');
+        rowCosto.classList.add('hidden');
+      }
+    }
 
     // Variabili globali per i risultati correnti
     let currentCalc = {
@@ -572,7 +573,8 @@
       ritenutaValEl.textContent    = formattaConPunti(Math.round(ritenuta2)) + ' €';
       flussoValEl.textContent      = formattaConPunti(Math.round(flusso2)) + ' €';
 
-      if (flusso2 < 0.2 * (currentCalc.costo + provvigione2) || flusso2 < 1000) {
+
+      if (withCustomer && (flusso2 < 0.2 * (currentCalc.costo + provvigione2) || flusso2 < 1000)) {
         alert('Lo sconto applicato non è ammissibile, ridurre lo sconto');
       }
 
