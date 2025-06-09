@@ -58,6 +58,7 @@ def index():
         "form.html",
         username=session.get("username"),
         role=session.get("role"),
+        with_customer=session.get("with_customer", False),
     )
 
 # ------------------------------------------------------------
@@ -68,10 +69,12 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
+        with_customer = request.form.get("with_customer") == "on"
         user = USERS.get(username)
         if user and user["password"] == password:
             session["username"] = username
             session["role"] = user["role"]
+            session["with_customer"] = with_customer
             return redirect(url_for("index"))
         flash("Credenziali non valide", "error")
     return render_template("login.html")
