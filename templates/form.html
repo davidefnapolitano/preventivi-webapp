@@ -261,6 +261,7 @@
     const rowMargine               = document.getElementById('row-margine');
     const rowCosto                 = document.getElementById('row-costo');
 
+
     // Solo l'utente "admin" vede i campi riservati
     if (userRole !== 'admin') {
       adminOnlyEls.forEach(el => el.classList.add('hidden'));
@@ -571,6 +572,7 @@
       margineValEl.textContent     = formattaConPunti(Math.round(margine2)) + ' €';
       ritenutaValEl.textContent    = formattaConPunti(Math.round(ritenuta2)) + ' €';
       flussoValEl.textContent      = formattaConPunti(Math.round(flusso2)) + ' €';
+
 
       if (withCustomer && (flusso2 < 0.2 * (currentCalc.costo + provvigione2) || flusso2 < 1000)) {
         alert('Lo sconto applicato non è ammissibile, ridurre lo sconto');
