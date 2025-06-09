@@ -82,7 +82,9 @@
         <label><input type="checkbox" id="objInverter" checked> Inverter</label>
         <label><input type="checkbox" id="objAccumulo" checked> Accumulo</label>
       </div>
-      <p class="note">Togli il check se non vuoi includere quell’elemento nel preventivo. “Accumulo” è selezionabile solo se hai scelto un valore >0 in “Capacità Accumulo”.</p>
+      <p class="note">Togli il check se non vuoi includere quell’elemento nel preventivo.</p>
+      <p class="note">“Accumulo” è selezionabile solo se hai scelto un valore >0 in “Capacità Accumulo”.</p> 
+      <p class="note">Lo staffaggio ed i cavi sono oggetto della fornitura solo in presenza di installazione.</p>
 
       <!-- 9. Provvigione (%) con default 6 -->
       <label for="provvigione">Provvigione (%) <span class="note">(default 6%)</span></label>
@@ -408,7 +410,7 @@
       }
 
       // 2.c) Staffaggio
-      if (wantPannelli) {
+      if (wantPannelli && installazione === "si") {
         costo += costData.staffaggio[potenza] || 0;
       }
 
