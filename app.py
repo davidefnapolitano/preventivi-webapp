@@ -9,6 +9,8 @@ import traceback
 import random
 import string
 import json
+import base64
+
 from datetime import datetime
 
 from flask import (
@@ -93,8 +95,13 @@ def get_sheet():
     if creds_info:
         try:
             service_dict = json.loads(creds_info)
-        except Exception as e:
-            raise RuntimeError(f"Invalid GOOGLE_SERVICE_ACCOUNT_INFO: {e}")
+        except json.JSONDecodeError:
+            # Some platforms require the JSON to be base64 encoded
+            try:
+                decoded = base64.b64decode(creds_info).decode("utf-8")
+                service_dict = json.loads(decoded)
+            except Exception as e:
+                raise RuntimeError(f"Invalid GOOGLE_SERVICE_ACCOUNT_INFO: {e}")
         creds = Credentials.from_service_account_info(service_dict, scopes=SCOPES)
     else:
         cred_file = SERVICE_ACCOUNT_FILE
@@ -104,8 +111,11 @@ def get_sheet():
                 "Set GOOGLE_SERVICE_ACCOUNT_INFO or GOOGLE_SERVICE_ACCOUNT_FILE"
             )
         creds = Credentials.from_service_account_file(cred_file, scopes=SCOPES)
-    gc = gspread.authorize(creds)
-    sh = gc.open_by_key(GOOGLE_SHEET_ID)
+    try:
+        gc = gspread.authorize(creds)
+        sh = gc.open_by_key(GOOGLE_SHEET_ID)
+    except Exception as e:
+        raise RuntimeError(f"Google Sheets authentication failed: {e}")
     return sh.sheet1
 
 # ------------------------------------------------------------
