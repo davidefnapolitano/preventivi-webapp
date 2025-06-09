@@ -134,19 +134,23 @@
         <span class="result-value" id="display-tipologia-cliente">-</span>
       </div>
       <hr>
-      <div class="result-item admin-only">
+      <div class="result-item admin-only" id="row-costo">
         <span class="result-label">Costo Complessivo:</span>
         <span class="result-value" id="costo-complessivo">-</span>
       </div>
-      <div class="result-item">
+      <div class="result-item" id="row-prezzo-listino">
         <span class="result-label">Prezzo di Listino (IVA 10%):</span>
         <span class="result-value" id="prezzo-listino">-</span>
       </div>
-      <div class="result-item">
+      <div class="result-item hidden" id="row-prezzo-scontato">
+        <span class="result-label">Prezzo Scontato (IVA 10%):</span>
+        <span class="result-value" id="prezzo-scontato">-</span>
+      </div>
+      <div class="result-item" id="row-provvigione">
         <span class="result-label">Provvigione (€):</span>
         <span class="result-value" id="provvigione-val">-</span>
       </div>
-      <div class="result-item admin-only">
+      <div class="result-item admin-only" id="row-margine">
         <span class="result-label">Margine (€):</span>
         <span class="result-value" id="margine-val">-</span>
       </div>
@@ -154,7 +158,7 @@
         <span class="result-label">Ritenuta d’Acconto (€):</span>
         <span class="result-value" id="ritenuta-val">-</span>
       </div>
-      <div class="result-item">
+      <div class="result-item" id="row-flusso">
         <span class="result-label">Flusso di Cassa (€):</span>
         <span class="result-value" id="flusso-val">-</span>
       </div>
@@ -178,6 +182,7 @@
   <!-- ============================= -->
   <script>
     const userRole = "{{ role }}";
+    const withCustomer = {{ 'true' if with_customer else 'false' }};
     // --- DATI PER IL CALCOLO DEI COSTI ---
     const costData = {
       pannelli: {
@@ -239,6 +244,14 @@
     if (userRole !== 'admin') {
       adminOnlyEls.forEach(el => el.classList.add('hidden'));
     }
+    if (withCustomer) {
+      rowProvvigione.classList.add('hidden');
+      rowFlusso.classList.add('hidden');
+      if (userRole === 'admin') {
+        rowMargine.classList.add('hidden');
+        rowCosto.classList.add('hidden');
+      }
+    }
 
     // Span dove mostriamo i risultati
     const displayPotenza           = document.getElementById('display-potenza');
@@ -250,15 +263,22 @@
     const displayTipologiaCliente  = document.getElementById('display-tipologia-cliente');
     const costoComplessivoEl       = document.getElementById('costo-complessivo');
     const prezzoListinoEl          = document.getElementById('prezzo-listino');
+    const prezzoScontatoRow        = document.getElementById('row-prezzo-scontato');
+    const prezzoScontatoEl         = document.getElementById('prezzo-scontato');
     const provvigioneValEl         = document.getElementById('provvigione-val');
     const margineValEl             = document.getElementById('margine-val');
     const ritenutaValEl            = document.getElementById('ritenuta-val');
     const flussoValEl              = document.getElementById('flusso-val');
+    const rowProvvigione           = document.getElementById('row-provvigione');
+    const rowFlusso                = document.getElementById('row-flusso');
+    const rowMargine               = document.getElementById('row-margine');
+    const rowCosto                 = document.getElementById('row-costo');
 
     // Variabili globali per i risultati correnti
     let currentCalc = {
       costo: 0,
       prezzoListino: 0,
+      prezzoScontato: 0,
       ritenuta: 0,
       provvigione: 0,
       margine: 0,
@@ -494,7 +514,7 @@
       let flusso = margine - ritenuta;
 
       // Salvo i risultati
-      currentCalc = { costo, prezzoListino, ritenuta, provvigione, margine, flusso };
+      currentCalc = { costo, prezzoListino, prezzoScontato: prezzoListino, ritenuta, provvigione, margine, flusso };
 
       // 8. Aggiorno la UI
       displayPotenza.textContent           = potenza + ' kW';
@@ -511,6 +531,7 @@
       displayTipologiaCliente.textContent  = tipologiaCliente;
       costoComplessivoEl.textContent       = formattaConPunti(Math.round(costo)) + ' €';
       prezzoListinoEl.textContent          = formattaConPunti(Math.round(prezzoListino)) + ' €';
+      prezzoScontatoRow.classList.add('hidden');
       provvigioneValEl.textContent         = formattaConPunti(Math.round(provvigione)) + ' € (' + provvigionePerc.toFixed(1) + '%)';
       margineValEl.textContent             = formattaConPunti(Math.round(margine)) + ' €';
       ritenutaValEl.textContent            = formattaConPunti(Math.round(ritenuta)) + ' €';
@@ -544,13 +565,18 @@
       let margine2     = prezzoScontato / 1.1 - provvigione2 - currentCalc.costo;
       let flusso2      = margine2 - ritenuta2;
 
-      prezzoListinoEl.textContent  = formattaConPunti(Math.round(prezzoScontato)) + ' €';
+      prezzoScontatoRow.classList.remove('hidden');
+      prezzoScontatoEl.textContent = formattaConPunti(Math.round(prezzoScontato)) + ' €';
       provvigioneValEl.textContent = formattaConPunti(Math.round(provvigione2)) + ' € (' + provvigionePerc.toFixed(1) + '%)';
       margineValEl.textContent     = formattaConPunti(Math.round(margine2)) + ' €';
       ritenutaValEl.textContent    = formattaConPunti(Math.round(ritenuta2)) + ' €';
       flussoValEl.textContent      = formattaConPunti(Math.round(flusso2)) + ' €';
 
-      currentCalc.prezzoListino = prezzoScontato;
+      if (flusso2 < 0.2 * (currentCalc.costo + provvigione2) || flusso2 < 1000) {
+        alert('Lo sconto applicato non è ammissibile, ridurre lo sconto');
+      }
+
+      currentCalc.prezzoScontato = prezzoScontato;
       currentCalc.ritenuta      = ritenuta2;
       currentCalc.provvigione   = provvigione2;
       currentCalc.margine       = margine2;
@@ -560,7 +586,7 @@
     // --- PULSANTE PER GENERARE IL PDF ---
     generaPdfBtn.addEventListener('click', () => {
       // Costruisco il payload JSON (includo "prezzoFormatted")
-      const prezzoFormattato = formattaConPunti(Math.round(currentCalc.prezzoListino));
+      const prezzoFormattato = formattaConPunti(Math.round(currentCalc.prezzoScontato || currentCalc.prezzoListino));
       const payload = {
         nome:             document.getElementById('nome').value.trim(),
         cognome:          document.getElementById('cognome').value.trim(),
@@ -574,7 +600,7 @@
         objInverter:      objInverterEl.checked,
         objAccumulo:      objAccumuloEl.checked,
         objColonnina:     objColonninaEl.checked,
-        prezzoListino:    currentCalc.prezzoListino,
+        prezzoListino:    currentCalc.prezzoScontato || currentCalc.prezzoListino,
         prezzoFormatted:  prezzoFormattato,
         provvigione:      currentCalc.provvigione,
         margine:          currentCalc.margine,
@@ -608,7 +634,7 @@
 
     // --- PULSANTE PER GENERARE IL DOCX ---
     generaDocBtn.addEventListener('click', () => {
-      const prezzoFormattato = formattaConPunti(Math.round(currentCalc.prezzoListino));
+      const prezzoFormattato = formattaConPunti(Math.round(currentCalc.prezzoScontato || currentCalc.prezzoListino));
       const payload = {
         nome:             document.getElementById('nome').value.trim(),
         cognome:          document.getElementById('cognome').value.trim(),
@@ -622,7 +648,7 @@
         objInverter:      objInverterEl.checked,
         objAccumulo:      objAccumuloEl.checked,
         objColonnina:     objColonninaEl.checked,
-        prezzoListino:    currentCalc.prezzoListino,
+        prezzoListino:    currentCalc.prezzoScontato || currentCalc.prezzoListino,
         prezzoFormatted:  prezzoFormattato,
         provvigione:      currentCalc.provvigione,
         margine:          currentCalc.margine,

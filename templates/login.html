@@ -23,6 +23,7 @@
       <input type="text" id="username" name="username" required />
       <label for="password">Password</label>
       <input type="password" id="password" name="password" required />
+      <label style="margin-top:10px"><input type="checkbox" name="with_customer"> Mi trovo con il cliente</label>
       <button type="submit">Accedi</button>
     </form>
     {% with messages = get_flashed_messages(category_filter=['error']) %}
