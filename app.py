@@ -10,6 +10,7 @@ import random
 import string
 import json
 import base64
+
 from datetime import datetime
 
 from flask import (
@@ -288,18 +289,49 @@ def genera_pdf():
         )
         response.headers["X-NC"] = nc_code
         return response
-
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
+# ------------------------------------------------------------
+# ROUTE PER SALVARE I DATI NEL GOOGLE SHEET
+# ------------------------------------------------------------
+@app.route("/salva_sheet", methods=["POST"])
+def salva_sheet_handler():
+    try:
+        dati = request.get_json(force=True)
+        sheet = get_sheet()
+        row = [
+            dati.get("nc"),
+            dati.get("nome"),
+            dati.get("cognome"),
+            dati.get("tipologiaCliente"),
+            dati.get("tipologia"),
+            dati.get("potenza"),
+            dati.get("accumulo"),
+            dati.get("np"),
+            dati.get("installazione"),
+            dati.get("tetto"),
+            dati.get("oggettoFornitura"),
+            dati.get("prezzoListino"),
+            dati.get("prezzoScontato"),
+            dati.get("provvigione"),
+            dati.get("margine"),
+            dati.get("ritenuta"),
+            dati.get("flusso"),
+        ]
+        sheet.append_row(row, value_input_option="USER_ENTERED")
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # ------------------------------------------------------------
 # ROUTE PER SALVARE I DATI NEL GOOGLE SHEET
 # ------------------------------------------------------------
 @app.route("/salva_sheet", methods=["POST"])
+
 def salva_sheet_handler():
     try:
         dati = request.get_json(force=True)
