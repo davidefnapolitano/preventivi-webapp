@@ -10,6 +10,7 @@ import random
 import string
 import json
 import base64
+
 from datetime import datetime
 
 from flask import (
@@ -292,8 +293,6 @@ def genera_pdf():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
 
 
 # ------------------------------------------------------------
