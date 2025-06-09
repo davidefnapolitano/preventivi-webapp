@@ -8,6 +8,7 @@ import io
 import traceback
 import random
 import string
+import json
 from datetime import datetime
 
 from flask import (
@@ -87,10 +88,17 @@ def generate_nc() -> str:
 
 
 def get_sheet():
-    creds = Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE,
-        scopes=SCOPES,
-    )
+    """Return the first worksheet of the configured Google Sheet."""
+    creds_info = os.environ.get("GOOGLE_SERVICE_ACCOUNT_INFO")
+    if creds_info:
+        creds = Credentials.from_service_account_info(
+            json.loads(creds_info), scopes=SCOPES
+        )
+    else:
+        creds = Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE,
+            scopes=SCOPES,
+        )
     gc = gspread.authorize(creds)
     sh = gc.open_by_key(GOOGLE_SHEET_ID)
     return sh.sheet1
@@ -250,9 +258,6 @@ def genera_pdf():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
-
 
 # ------------------------------------------------------------
 # ROUTE PER SALVARE I DATI NEL GOOGLE SHEET
