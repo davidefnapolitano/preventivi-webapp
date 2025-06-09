@@ -8,6 +8,7 @@ import io
 import traceback
 import random
 import string
+import json
 from datetime import datetime
 
 from flask import (
@@ -22,6 +23,8 @@ from flask import (
     session,
 )
 from docxtpl import DocxTemplate
+import gspread
+from google.oauth2.service_account import Credentials
 
 # ------------------------------------------------------------
 # CONFIGURAZIONE FOLDER E TEMPLATE
@@ -42,6 +45,9 @@ USERS = {
 BASE_DIR        = os.path.abspath(os.path.dirname(__file__))
 TEMPLATES_DOCX  = os.path.join(BASE_DIR, "templates_docx")
 OUT_DIR         = os.path.join(BASE_DIR, "out")
+GOOGLE_SHEET_ID = "1sazXbmARDJ29s8HuPVfvvRdCig93KJpj-th6xBYw7-g"
+SERVICE_ACCOUNT_FILE = os.environ.get("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json")
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # Percorsi ai file .docx template (verifica che i nomi siano esatti)
 TPL_SENZA_ACCUMULO = os.path.join(TEMPLATES_DOCX, "template_senza_accumulo.docx")
@@ -79,6 +85,28 @@ def generate_nc() -> str:
     random_part = "".join(random.choices(string.ascii_lowercase + string.digits, k=3))
     date_part = datetime.now().strftime("%d%m%y")
     return random_part + date_part
+
+
+def get_sheet():
+    """Return the first worksheet of the configured Google Sheet."""
+    creds_info = os.environ.get("GOOGLE_SERVICE_ACCOUNT_INFO")
+    if creds_info:
+        try:
+            service_dict = json.loads(creds_info)
+        except Exception as e:
+            raise RuntimeError(f"Invalid GOOGLE_SERVICE_ACCOUNT_INFO: {e}")
+        creds = Credentials.from_service_account_info(service_dict, scopes=SCOPES)
+    else:
+        cred_file = SERVICE_ACCOUNT_FILE
+        if not os.path.exists(cred_file):
+            raise RuntimeError(
+                "Google Sheets credentials not found. "
+                "Set GOOGLE_SERVICE_ACCOUNT_INFO or GOOGLE_SERVICE_ACCOUNT_FILE"
+            )
+        creds = Credentials.from_service_account_file(cred_file, scopes=SCOPES)
+    gc = gspread.authorize(creds)
+    sh = gc.open_by_key(GOOGLE_SHEET_ID)
+    return sh.sheet1
 
 # ------------------------------------------------------------
 # ROUTE PRINCIPALE: mostra il form HTML (GET)
@@ -176,7 +204,8 @@ def genera_pdf():
             "Prezzo":         dati.get("prezzoFormatted", "")  # già stringa formattata con “.”
         }
         contesto["Np"] = np_value
-        contesto["NC"] = generate_nc()
+        nc_code = generate_nc()
+        contesto["NC"] = nc_code
         if "margine" in dati:
             contesto["Margine"] = f"{dati['margine']:.2f}"
         if "ritenuta" in dati:
@@ -222,13 +251,51 @@ def genera_pdf():
 
         # 9) Invia il PDF al browser con nome “Preventivo_<…>.pdf”
         download_name = f"Preventivo_{dati['nome']}_{dati['cognome']}_{uid}.pdf"
-        return send_file(
+        response = send_file(
             io.BytesIO(pdf_bytes),
             as_attachment=True,
             download_name=download_name,
             mimetype="application/pdf"
         )
+        response.headers["X-NC"] = nc_code
+        return response
 
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
+
+# ------------------------------------------------------------
+# ROUTE PER SALVARE I DATI NEL GOOGLE SHEET
+# ------------------------------------------------------------
+@app.route("/salva_sheet", methods=["POST"])
+def salva_sheet_handler():
+    try:
+        dati = request.get_json(force=True)
+        sheet = get_sheet()
+        row = [
+            dati.get("nc"),
+            dati.get("nome"),
+            dati.get("cognome"),
+            dati.get("tipologiaCliente"),
+            dati.get("tipologia"),
+            dati.get("potenza"),
+            dati.get("accumulo"),
+            dati.get("np"),
+            dati.get("installazione"),
+            dati.get("tetto"),
+            dati.get("oggettoFornitura"),
+            dati.get("prezzoListino"),
+            dati.get("prezzoScontato"),
+            dati.get("provvigione"),
+            dati.get("margine"),
+            dati.get("ritenuta"),
+            dati.get("flusso"),
+        ]
+        sheet.append_row(row, value_input_option="USER_ENTERED")
+        return jsonify({"status": "ok"})
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -272,7 +339,8 @@ def genera_doc():
             "Prezzo":         dati.get("prezzoFormatted", "")
         }
         contesto["Np"] = np_value
-        contesto["NC"] = generate_nc()
+        nc_code = generate_nc()
+        contesto["NC"] = nc_code
         if "margine" in dati:
             contesto["Margine"] = f"{dati['margine']:.2f}"
         if "ritenuta" in dati:
@@ -297,12 +365,14 @@ def genera_doc():
 
         # 7) Invia il DOCX al browser
         download_name = f"Preventivo_{dati['nome']}_{dati['cognome']}_{uid}.docx"
-        return send_file(
+        response = send_file(
             io.BytesIO(docx_bytes),
             as_attachment=True,
             download_name=download_name,
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
+        response.headers["X-NC"] = nc_code
+        return response
 
     except Exception as e:
         traceback.print_exc()
