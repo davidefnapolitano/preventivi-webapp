@@ -259,9 +259,6 @@ def genera_pdf():
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
-
-
 # ------------------------------------------------------------
 # ROUTE PER SALVARE I DATI NEL GOOGLE SHEET
 # ------------------------------------------------------------
