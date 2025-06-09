@@ -468,8 +468,8 @@
         if (wantColonnina) {
           costoInstallazione += 250;
         }
-        // 200 € cavi (se selezionato almeno un oggetto diverso da “Pannelli”)
-        if (wantInverter || wantAccumulo || wantColonnina) {
+        // 200 € cavi (se selezionato almeno un oggetto diverso da “Pannelli”, tranne la wallbox)
+        if (wantInverter || wantAccumulo) {
           costoInstallazione += 200;
         }
       }
