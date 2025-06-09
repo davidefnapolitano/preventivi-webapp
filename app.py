@@ -265,12 +265,11 @@ def genera_pdf():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-
-
 # ------------------------------------------------------------
 # ROUTE PER SALVARE I DATI NEL GOOGLE SHEET
 # ------------------------------------------------------------
 @app.route("/salva_sheet", methods=["POST"])
+
 def salva_sheet_handler():
     try:
         dati = request.get_json(force=True)
