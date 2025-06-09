@@ -75,12 +75,20 @@
       </select>
       <p class="note">Se selezioni “No, solo fornitura”, il costo di installazione verrà escluso.</p>
 
-      <!-- 8. Oggetto della fornitura (nuovo) -->
+      <!-- 8. Tipologia di Tetto -->
+      <label for="tetto">Tipologia di Tetto</label>
+      <select id="tetto" name="tetto" required>
+        <option value="inclinato">Inclinato</option>
+        <option value="piano">Piano (occorrono le zavorre)</option>
+      </select>
+
+      <!-- 9. Oggetto della fornitura (nuovo) -->
       <label>Oggetto della fornitura</label>
       <div class="checkbox-group">
         <label><input type="checkbox" id="objPannelli" checked> Pannelli</label>
         <label><input type="checkbox" id="objInverter" checked> Inverter</label>
         <label><input type="checkbox" id="objAccumulo" checked> Accumulo</label>
+        <label><input type="checkbox" id="objColonnina"> Colonnina di ricarica</label>
       </div>
       <p class="note">Togli il check se non vuoi includere quell’elemento nel preventivo.</p>
       <p class="note">“Accumulo” è selezionabile solo se hai scelto un valore >0 in “Capacità Accumulo”.</p> 
@@ -112,6 +120,10 @@
       <div class="result-item">
         <span class="result-label">Installazione:</span>
         <span class="result-value" id="display-installazione">-</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Tipologia Tetto:</span>
+        <span class="result-value" id="display-tetto">-</span>
       </div>
       <div class="result-item">
         <span class="result-label">Oggetto Fornitura:</span>
@@ -208,9 +220,11 @@
     const tagliaEl           = document.getElementById('taglia');
     const accumuloEl         = document.getElementById('accumulo');
     const installazioneEl    = document.getElementById('installazione');
+    const tettoEl            = document.getElementById('tetto');
     const objPannelliEl      = document.getElementById('objPannelli');
     const objInverterEl      = document.getElementById('objInverter');
     const objAccumuloEl      = document.getElementById('objAccumulo');
+    const objColonninaEl     = document.getElementById('objColonnina');
     const provvigioneEl      = document.getElementById('provvigione');
     const calcolaBtn         = document.getElementById('calcolaBtn');
     const risultatiDiv       = document.getElementById('risultati');
@@ -231,6 +245,7 @@
     const displayAccumulo          = document.getElementById('display-accumulo');
     const displayTipologia         = document.getElementById('display-tipologia');
     const displayInstallazione     = document.getElementById('display-installazione');
+    const displayTetto             = document.getElementById('display-tetto');
     const displayOggetto           = document.getElementById('display-oggetto');
     const displayTipologiaCliente  = document.getElementById('display-tipologia-cliente');
     const costoComplessivoEl       = document.getElementById('costo-complessivo');
@@ -372,9 +387,11 @@
       const potenza           = parseFloat(tagliaEl.value);
       const accumulo          = parseFloat(accumuloEl.value);
       const installazione     = installazioneEl.value;      // "si"/"no"
+      const tetto             = tettoEl.value;              // inclinato/piano
       const wantPannelli      = objPannelliEl.checked;
       const wantInverter      = objInverterEl.checked;
       const wantAccumulo      = objAccumuloEl.checked;
+      const wantColonnina     = objColonninaEl.checked;
       let provvigionePerc     = parseFloat(provvigioneEl.value);
       if (isNaN(provvigionePerc) || provvigionePerc <= 0) provvigionePerc = 6;
 
@@ -411,7 +428,9 @@
 
       // 2.c) Staffaggio
       if (wantPannelli && installazione === "si") {
-        costo += costData.staffaggio[potenza] || 0;
+        let staff = costData.staffaggio[potenza] || 0;
+        if (tetto === 'piano') staff *= 2;
+        costo += staff;
       }
 
       // 2.d) Accumulo  
@@ -427,7 +446,12 @@
         costo += costData.meter[tipologia][potenza] || 0;
       }
 
-      // 2.f) Installazione: se “si”, applico la nuova formula  
+      // 2.f) Colonnina di ricarica
+      if (wantColonnina) {
+        costo += 250;
+      }
+
+      // 2.g) Installazione: se “si”, applico la nuova formula
       let costoInstallazione = 0;
       if (installazione === "si") {
         // 200 €/kW
@@ -440,8 +464,12 @@
         if (wantAccumulo) {
           costoInstallazione += 250;
         }
+        // 250 € per installazione colonnina (se selezionata)
+        if (wantColonnina) {
+          costoInstallazione += 250;
+        }
         // 200 € cavi (se selezionato almeno un oggetto diverso da “Pannelli”)
-        if (wantInverter || wantAccumulo) {
+        if (wantInverter || wantAccumulo || wantColonnina) {
           costoInstallazione += 200;
         }
       }
@@ -473,10 +501,12 @@
       displayAccumulo.textContent          = (wantAccumulo ? accumulo + ' kWh' : 'Nessuno');
       displayTipologia.textContent         = (tipologia === 'Mono' ? 'Monofase' : 'Trifase');
       displayInstallazione.textContent     = (installazione === 'si' ? 'Sì' : 'No');
+      displayTetto.textContent             = (tetto === 'piano' ? 'Piano' : 'Inclinato');
       let oggettoArr = [];
       if (wantPannelli) oggettoArr.push('Pannelli');
       if (wantInverter) oggettoArr.push('Inverter');
       if (wantAccumulo) oggettoArr.push('Accumulo');
+      if (wantColonnina) oggettoArr.push('Colonnina');
       displayOggetto.textContent           = oggettoArr.join(', ');
       displayTipologiaCliente.textContent  = tipologiaCliente;
       costoComplessivoEl.textContent       = formattaConPunti(Math.round(costo)) + ' €';
@@ -539,9 +569,11 @@
         potenza:          parseFloat(tagliaEl.value),
         accumulo:         parseFloat(accumuloEl.value) || 0,
         installazione:    installazioneEl.value,
+        tetto:            tettoEl.value,
         objPannelli:      objPannelliEl.checked,
         objInverter:      objInverterEl.checked,
         objAccumulo:      objAccumuloEl.checked,
+        objColonnina:     objColonninaEl.checked,
         prezzoListino:    currentCalc.prezzoListino,
         prezzoFormatted:  prezzoFormattato,
         provvigione:      currentCalc.provvigione,
@@ -585,9 +617,11 @@
         potenza:          parseFloat(tagliaEl.value),
         accumulo:         parseFloat(accumuloEl.value) || 0,
         installazione:    installazioneEl.value,
+        tetto:            tettoEl.value,
         objPannelli:      objPannelliEl.checked,
         objInverter:      objInverterEl.checked,
         objAccumulo:      objAccumuloEl.checked,
+        objColonnina:     objColonninaEl.checked,
         prezzoListino:    currentCalc.prezzoListino,
         prezzoFormatted:  prezzoFormattato,
         provvigione:      currentCalc.provvigione,
