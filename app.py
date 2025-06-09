@@ -91,14 +91,19 @@ def get_sheet():
     """Return the first worksheet of the configured Google Sheet."""
     creds_info = os.environ.get("GOOGLE_SERVICE_ACCOUNT_INFO")
     if creds_info:
-        creds = Credentials.from_service_account_info(
-            json.loads(creds_info), scopes=SCOPES
-        )
+        try:
+            service_dict = json.loads(creds_info)
+        except Exception as e:
+            raise RuntimeError(f"Invalid GOOGLE_SERVICE_ACCOUNT_INFO: {e}")
+        creds = Credentials.from_service_account_info(service_dict, scopes=SCOPES)
     else:
-        creds = Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE,
-            scopes=SCOPES,
-        )
+        cred_file = SERVICE_ACCOUNT_FILE
+        if not os.path.exists(cred_file):
+            raise RuntimeError(
+                "Google Sheets credentials not found. "
+                "Set GOOGLE_SERVICE_ACCOUNT_INFO or GOOGLE_SERVICE_ACCOUNT_FILE"
+            )
+        creds = Credentials.from_service_account_file(cred_file, scopes=SCOPES)
     gc = gspread.authorize(creds)
     sh = gc.open_by_key(GOOGLE_SHEET_ID)
     return sh.sheet1
@@ -254,7 +259,41 @@ def genera_pdf():
         )
         response.headers["X-NC"] = nc_code
         return response
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
+
+
+# ------------------------------------------------------------
+# ROUTE PER SALVARE I DATI NEL GOOGLE SHEET
+# ------------------------------------------------------------
+@app.route("/salva_sheet", methods=["POST"])
+def salva_sheet():
+    try:
+        dati = request.get_json(force=True)
+        sheet = get_sheet()
+        row = [
+            dati.get("nc"),
+            dati.get("nome"),
+            dati.get("cognome"),
+            dati.get("tipologiaCliente"),
+            dati.get("tipologia"),
+            dati.get("potenza"),
+            dati.get("accumulo"),
+            dati.get("np"),
+            dati.get("installazione"),
+            dati.get("tetto"),
+            dati.get("oggettoFornitura"),
+            dati.get("prezzoListino"),
+            dati.get("prezzoScontato"),
+            dati.get("provvigione"),
+            dati.get("margine"),
+            dati.get("ritenuta"),
+            dati.get("flusso"),
+        ]
+        sheet.append_row(row, value_input_option="USER_ENTERED")
+        return jsonify({"status": "ok"})
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
