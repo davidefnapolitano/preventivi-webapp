@@ -175,6 +175,7 @@
     <!-- 13. Bottoni per Generare il PDF o il DOCX (nascosti finché non calcoli) -->
     <button id="generaPdfBtn" class="hidden">Genera Preventivo PDF</button>
     <button id="generaDocBtn" class="hidden">Genera Preventivo DOC</button>
+    <button id="salvaSheetBtn" class="hidden">Salva il preventivo nello Sheet</button>
   </div>
 
   <!-- ============================= -->
@@ -238,6 +239,7 @@
     const applicaScontoBtn   = document.getElementById('applicaScontoBtn');
     const generaPdfBtn       = document.getElementById('generaPdfBtn');
     const generaDocBtn       = document.getElementById('generaDocBtn');
+    const salvaSheetBtn      = document.getElementById('salvaSheetBtn');
     const adminOnlyEls       = document.querySelectorAll('.admin-only');
 
     // Span dove mostriamo i risultati
@@ -285,6 +287,7 @@
       margine: 0,
       flusso: 0
     };
+    let currentNC = null;
 
     // --- UTILITY DI ARROTONDAMENTO ---
     function roundToMultiple(value, multiple) {
@@ -617,6 +620,8 @@
       })
       .then(resp => {
         if (!resp.ok) throw new Error('Errore nel server');
+        const ncHeader = resp.headers.get('X-NC');
+        if (ncHeader) currentNC = ncHeader;
         return resp.blob();
       })
       .then(blob => {
@@ -627,6 +632,7 @@
         document.body.appendChild(a);
         a.click();
         a.remove();
+        salvaSheetBtn.classList.remove('hidden');
       })
       .catch(err => {
         console.error(err);
@@ -665,6 +671,8 @@
       })
       .then(resp => {
         if (!resp.ok) throw new Error('Errore nel server');
+        const ncHeader = resp.headers.get('X-NC');
+        if (ncHeader) currentNC = ncHeader;
         return resp.blob();
       })
       .then(blob => {
@@ -675,10 +683,69 @@
         document.body.appendChild(a);
         a.click();
         a.remove();
+        salvaSheetBtn.classList.remove('hidden');
       })
       .catch(err => {
         console.error(err);
         alert('Errore nella generazione del DOCX: ' + err.message);
+      });
+    });
+
+    // --- SALVATAGGIO SU GOOGLE SHEET ---
+    salvaSheetBtn.addEventListener('click', () => {
+      if (!currentNC) {
+        alert('Genera prima il preventivo PDF o DOC.');
+        return;
+      }
+
+      const nome             = document.getElementById('nome').value.trim();
+      const cognome          = document.getElementById('cognome').value.trim();
+      const tipologia        = tipologiaEl.value;
+      const potenza          = parseFloat(tagliaEl.value);
+      const accumulo         = parseFloat(accumuloEl.value) || 0;
+
+      const oggetto = [];
+      if (objPannelliEl.checked) oggetto.push('Pannelli');
+      if (objInverterEl.checked) oggetto.push('Inverter');
+      if (objAccumuloEl.checked) oggetto.push('Accumulo');
+      if (objColonninaEl.checked) oggetto.push('Colonnina');
+
+      const payload = {
+        nc: currentNC,
+        nome,
+        cognome,
+        tipologiaCliente: tipologiaClienteEl.value,
+        tipologia,
+        potenza,
+        accumulo,
+        np: costData.numPannelli[tipologia][potenza] || '',
+        installazione: installazioneEl.value === 'si' ? 'Sì' : 'No',
+        tetto: tettoEl.value,
+        oggettoFornitura: oggetto.join(', '),
+        prezzoListino: currentCalc.prezzoListino,
+        prezzoScontato: currentCalc.prezzoScontato || currentCalc.prezzoListino,
+        provvigione: currentCalc.provvigione,
+        margine: currentCalc.margine,
+        ritenuta: currentCalc.ritenuta,
+        flusso: currentCalc.flusso
+      };
+
+      fetch('/salva_sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(resp => {
+        if (!resp.ok) throw new Error('Errore salvataggio');
+        return resp.json();
+      })
+      .then(() => {
+        alert('Preventivo salvato sullo Sheet');
+        salvaSheetBtn.classList.add('hidden');
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Errore nel salvataggio: ' + err.message);
       });
     });
   </script>
