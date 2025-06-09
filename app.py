@@ -6,6 +6,9 @@ import uuid
 import subprocess
 import io
 import traceback
+import random
+import string
+from datetime import datetime
 
 from flask import (
     Flask,
@@ -46,6 +49,30 @@ TPL_CON_ACCUMULO   = os.path.join(TEMPLATES_DOCX, "template_con_accumulo.docx")
 
 # Crea la cartella OUT se non esiste
 os.makedirs(OUT_DIR, exist_ok=True)
+
+# Mappa dei pannelli per tipologia e potenza (usata per {{Np}} nei template)
+NUM_PANNELLI = {
+    "Mono": {3: 7, 4: 9, 5: 12, 6: 14},
+    "Tri": {
+        6: 14,
+        8: 18,
+        10: 23,
+        15: 34,
+        20: 45,
+        25: 56,
+        30: 67,
+        40: 89,
+        50: 112,
+        60: 134,
+    },
+}
+
+
+def generate_nc() -> str:
+    """Genera il codice univoco per {{NC}}."""
+    random_part = "".join(random.choices(string.ascii_lowercase + string.digits, k=3))
+    date_part = datetime.now().strftime("%d%m%y")
+    return random_part + date_part
 
 # ------------------------------------------------------------
 # ROUTE PRINCIPALE: mostra il form HTML (GET)
@@ -127,6 +154,7 @@ def genera_pdf():
 
         # 3) Prepara il contesto per docxtpl
         #    NOTA: usiamo "prezzoFormatted" per preservare i punti
+        np_value = NUM_PANNELLI.get(dati.get("tipologia"), {}).get(int(dati.get("potenza", 0)), "")
         contesto = {
             "Nome":           dati.get("nome", ""),
             "Cognome":        dati.get("cognome", ""),
@@ -134,6 +162,8 @@ def genera_pdf():
             "Acc":            f"{int(dati.get('accumulo', 0))}" if dati.get("accumulo", 0) > 0 else "",
             "Prezzo":         dati.get("prezzoFormatted", "")  # già stringa formattata con “.”
         }
+        contesto["Np"] = np_value
+        contesto["NC"] = generate_nc()
         if "margine" in dati:
             contesto["Margine"] = f"{dati['margine']:.2f}"
         if "ritenuta" in dati:
@@ -213,6 +243,7 @@ def genera_doc():
         path_docx_out = os.path.join(OUT_DIR, nome_docx_out)
 
         # 3) Prepara il contesto per docxtpl
+        np_value = NUM_PANNELLI.get(dati.get("tipologia"), {}).get(int(dati.get("potenza", 0)), "")
         contesto = {
             "Nome":           dati.get("nome", ""),
             "Cognome":        dati.get("cognome", ""),
@@ -220,6 +251,8 @@ def genera_doc():
             "Acc":            f"{int(dati.get('accumulo', 0))}" if dati.get("accumulo", 0) > 0 else "",
             "Prezzo":         dati.get("prezzoFormatted", "")
         }
+        contesto["Np"] = np_value
+        contesto["NC"] = generate_nc()
         if "margine" in dati:
             contesto["Margine"] = f"{dati['margine']:.2f}"
         if "ritenuta" in dati:
