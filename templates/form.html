@@ -94,9 +94,13 @@
       <p class="note">“Accumulo” è selezionabile solo se hai scelto un valore >0 in “Capacità Accumulo”.</p> 
       <p class="note">Lo staffaggio ed i cavi sono oggetto della fornitura solo in presenza di installazione.</p>
 
-      <!-- 9. Provvigione (%) con default 6 -->
-      <label for="provvigione">Provvigione (%) <span class="note">(default 6%)</span></label>
-      <input type="number" id="provvigione" name="provvigione" placeholder="6" min="0" max="100" step="0.1" />
+      {% if with_customer %}
+      <input type="hidden" id="provvigione" value="4" />
+      {% else %}
+      <!-- 9. Provvigione (%) con default 4 -->
+      <label for="provvigione">Provvigione (%) <span class="note">(default 4%)</span></label>
+      <input type="number" id="provvigione" name="provvigione" placeholder="4" min="0" max="100" step="0.1" />
+      {% endif %}
 
       <!-- 10. Bottone per il calcolo -->
       <button id="calcolaBtn">Calcola Preventivo</button>
@@ -417,7 +421,7 @@
       const wantAccumulo      = objAccumuloEl.checked;
       const wantColonnina     = objColonninaEl.checked;
       let provvigionePerc     = parseFloat(provvigioneEl.value);
-      if (isNaN(provvigionePerc) || provvigionePerc <= 0) provvigionePerc = 6;
+      if (isNaN(provvigionePerc) || provvigionePerc <= 0) provvigionePerc = 4;
 
       // Validazioni base
       if (!nome || !cognome || !tipologiaCliente || !tipologia || isNaN(potenza)) {
@@ -564,7 +568,7 @@
       if (tipologiaCliente === "Privato" && potenza < 20) {
         ritenuta2 = prezzoScontato / 1.22 * 0.11;
       }
-      let provvigionePerc = parseFloat(provvigioneEl.value) > 0 ? parseFloat(provvigioneEl.value) : 6;
+      let provvigionePerc = parseFloat(provvigioneEl.value) > 0 ? parseFloat(provvigioneEl.value) : 4;
       let provvigione2 = roundToMultiple((prezzoScontato / 1.1) * (provvigionePerc / 100), 10);
       let margine2     = prezzoScontato / 1.1 - provvigione2 - currentCalc.costo;
       let flusso2      = margine2 - ritenuta2;
