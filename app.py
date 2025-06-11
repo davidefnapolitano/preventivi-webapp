@@ -231,7 +231,8 @@ def genera_pdf():
             "Cognome":        dati.get("cognome", ""),
             "Pot":            f"{int(dati.get('potenza', 0))}",
             "Acc":            f"{int(dati.get('accumulo', 0))}" if dati.get("accumulo", 0) > 0 else "",
-            "Prezzo":         dati.get("prezzoFormatted", "")  # già stringa formattata con “.”
+            "Prezzo":         dati.get("prezzoFormatted", ""),  # già stringa formattata con “.”
+            "Tipo":           "IBRIDO" if dati.get("tipoInverter", "ibrido") == "ibrido" else "DI STRINGA",
         }
         contesto["Np"] = np_value
         nc_code = generate_nc()
@@ -364,7 +365,8 @@ def genera_doc():
             "Cognome":        dati.get("cognome", ""),
             "Pot":            f"{int(dati.get('potenza', 0))}",
             "Acc":            f"{int(dati.get('accumulo', 0))}" if dati.get("accumulo", 0) > 0 else "",
-            "Prezzo":         dati.get("prezzoFormatted", "")
+            "Prezzo":         dati.get("prezzoFormatted", ""),
+            "Tipo":           "IBRIDO" if dati.get("tipoInverter", "ibrido") == "ibrido" else "DI STRINGA",
         }
         contesto["Np"] = np_value
         nc_code = generate_nc()

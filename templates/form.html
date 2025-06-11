@@ -265,6 +265,8 @@
         tipoInverterEl.disabled = false;
         tipoInverterEl.classList.remove('hidden');
         labelTipoInverter.classList.remove('hidden');
+        // Nessun accumulo: l'inverter di default è "Stringa"
+        tipoInverterEl.value = 'stringa';
       }
     }
 
@@ -632,6 +634,7 @@
         tipologia:        tipologiaEl.value,
         potenza:          parseFloat(tagliaEl.value),
         accumulo:         parseFloat(accumuloEl.value) || 0,
+        tipoInverter:     (parseFloat(accumuloEl.value) > 0) ? 'ibrido' : tipoInverterEl.value,
         installazione:    installazioneEl.value,
         tetto:            tettoEl.value,
         objPannelli:      objPannelliEl.checked,
@@ -683,6 +686,7 @@
         tipologia:        tipologiaEl.value,
         potenza:          parseFloat(tagliaEl.value),
         accumulo:         parseFloat(accumuloEl.value) || 0,
+        tipoInverter:     (parseFloat(accumuloEl.value) > 0) ? 'ibrido' : tipoInverterEl.value,
         installazione:    installazioneEl.value,
         tetto:            tettoEl.value,
         objPannelli:      objPannelliEl.checked,
