@@ -89,6 +89,15 @@
         <option value="piano">Piano (occorrono le zavorre)</option>
       </select>
 
+      <!-- 9b. Pannelli aggiuntivi -->
+      <label for="morePannelli">Voglio più pannelli?</label>
+      <select id="morePannelli" name="morePannelli">
+        <option value="0" selected>No</option>
+        <option value="2">2 pannelli - circa 1 kW in più</option>
+        <option value="4">4 pannelli - circa 2 kW in più</option>
+        <option value="6">6 pannelli - circa 3 kW in più</option>
+      </select>
+
       <!-- 9. Oggetto della fornitura (nuovo) -->
       <label>Oggetto della fornitura</label>
       <div class="checkbox-group">
@@ -245,6 +254,7 @@
     const objAccumuloEl      = document.getElementById('objAccumulo');
     const objColonninaEl     = document.getElementById('objColonnina');
     const provvigioneEl      = document.getElementById('provvigione');
+    const morePannelliEl     = document.getElementById('morePannelli');
     const calcolaBtn         = document.getElementById('calcolaBtn');
     const risultatiDiv       = document.getElementById('risultati');
     const scontoSection      = document.getElementById('sconto-section');
@@ -271,6 +281,11 @@
     }
 
     updateTipoInverterVisibility();
+    // Imposta correttamente la disabilitazione dei pannelli con il valore di default
+    if (parseInt(morePannelliEl.value) > 0) {
+      objPannelliEl.checked = true;
+      objPannelliEl.disabled = true;
+    }
 
     // Span dove mostriamo i risultati
     const displayPotenza           = document.getElementById('display-potenza');
@@ -436,6 +451,16 @@
       updateTipoInverterVisibility();
     });
 
+    // Se selezioni pannelli aggiuntivi, i pannelli non sono deselezionabili
+    morePannelliEl.addEventListener('change', () => {
+      if (parseInt(morePannelliEl.value) > 0) {
+        objPannelliEl.checked = true;
+        objPannelliEl.disabled = true;
+      } else {
+        objPannelliEl.disabled = false;
+      }
+    });
+
     // --- CALCOLO DEL PREVENTIVO ---
     calcolaBtn.addEventListener('click', () => {
       // 1. Valori di input
@@ -445,6 +470,8 @@
       const tipologia         = tipologiaEl.value;          // Mono/Tri
       const potenza           = parseFloat(tagliaEl.value);
       const accumulo          = parseFloat(accumuloEl.value);
+      const extraPanels       = parseInt(morePannelliEl.value) || 0;
+      const extraKw           = extraPanels / 2;
       const installazione     = installazioneEl.value;      // "si"/"no"
       const tetto             = tettoEl.value;              // inclinato/piano
       const wantPannelli      = objPannelliEl.checked;
@@ -479,6 +506,9 @@
       if (wantPannelli) {
         costo += costData.pannelli[tipologia][potenza] || 0;
       }
+      if (extraPanels > 0) {
+        costo += 63 * extraPanels;
+      }
 
       // 2.b) Quadri: sempre incluso se l’oggetto “Inverter” o “Accumulo” è selezionato
       if (wantInverter || wantAccumulo) {
@@ -490,6 +520,11 @@
         let staff = costData.staffaggio[potenza] || 0;
         if (tetto === 'piano') staff *= 2;
         costo += staff;
+      }
+      if (extraPanels > 0 && installazione === "si") {
+        let extraStaff = 80 * extraKw;
+        if (tetto === 'piano') extraStaff *= 2;
+        costo += extraStaff;
       }
 
       // 2.d) Accumulo  
@@ -515,6 +550,9 @@
       if (installazione === "si") {
         // 200 €/kW
         costoInstallazione += 200 * potenza;
+        if (extraKw > 0) {
+          costoInstallazione += 200 * extraKw;
+        }
         // 300 € per installazione inverter (se selezionato)
         if (wantInverter) {
           costoInstallazione += 300;
@@ -539,7 +577,7 @@
 
       // 4. Ritenuta d’Acconto  
       let ritenuta = 0;
-      if (tipologiaCliente === "Privato" && potenza < 20) {
+      if (tipologiaCliente === "Privato" && (potenza + extraKw) < 20) {
         ritenuta = prezzoListino / 1.22 * 0.11;
       }
 
@@ -556,7 +594,7 @@
       currentCalc = { costo, prezzoListino, prezzoScontato: prezzoListino, ritenuta, provvigione, margine, flusso };
 
       // 8. Aggiorno la UI
-      displayPotenza.textContent           = potenza + ' kW';
+      displayPotenza.textContent           = (potenza + extraKw) + ' kW';
       displayAccumulo.textContent          = (wantAccumulo ? accumulo + ' kWh' : 'Nessuno');
       displayTipologia.textContent         = (tipologia === 'Mono' ? 'Monofase' : 'Trifase');
       displayInstallazione.textContent     = (installazione === 'si' ? 'Sì' : 'No');
@@ -594,9 +632,11 @@
 
       // Ricalcolo ritenuta, provvigione, margine, flusso  
       const potenza = parseFloat(tagliaEl.value);
+      const extraPanels = parseInt(morePannelliEl.value) || 0;
+      const extraKw = extraPanels / 2;
       const tipologiaCliente = tipologiaClienteEl.value;
       let ritenuta2 = 0;
-      if (tipologiaCliente === "Privato" && potenza < 20) {
+      if (tipologiaCliente === "Privato" && (potenza + extraKw) < 20) {
         ritenuta2 = prezzoScontato / 1.22 * 0.11;
       }
       let provvigionePerc = parseFloat(provvigioneEl.value) > 0 ? parseFloat(provvigioneEl.value) : 4;
@@ -637,6 +677,7 @@
         tipoInverter:     (parseFloat(accumuloEl.value) > 0) ? 'ibrido' : tipoInverterEl.value,
         installazione:    installazioneEl.value,
         tetto:            tettoEl.value,
+        extraPannelli:    parseInt(morePannelliEl.value) || 0,
         objPannelli:      objPannelliEl.checked,
         objInverter:      objInverterEl.checked,
         objAccumulo:      objAccumuloEl.checked,
@@ -689,6 +730,7 @@
         tipoInverter:     (parseFloat(accumuloEl.value) > 0) ? 'ibrido' : tipoInverterEl.value,
         installazione:    installazioneEl.value,
         tetto:            tettoEl.value,
+        extraPannelli:    parseInt(morePannelliEl.value) || 0,
         objPannelli:      objPannelliEl.checked,
         objInverter:      objInverterEl.checked,
         objAccumulo:      objAccumuloEl.checked,
