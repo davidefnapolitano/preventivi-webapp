@@ -225,11 +225,13 @@ def genera_pdf():
 
         # 3) Prepara il contesto per docxtpl
         #    NOTA: usiamo "prezzoFormatted" per preservare i punti
-        np_value = NUM_PANNELLI.get(dati.get("tipologia"), {}).get(int(dati.get("potenza", 0)), "")
+        extra_pan = int(dati.get("extraPannelli", 0))
+        extra_kw = extra_pan // 2
+        np_value = (NUM_PANNELLI.get(dati.get("tipologia"), {}).get(int(dati.get("potenza", 0)), 0) + extra_pan)
         contesto = {
             "Nome":           dati.get("nome", ""),
             "Cognome":        dati.get("cognome", ""),
-            "Pot":            f"{int(dati.get('potenza', 0))}",
+            "Pot":            f"{int(dati.get('potenza', 0)) + extra_kw}",
             "Acc":            f"{int(dati.get('accumulo', 0))}" if dati.get("accumulo", 0) > 0 else "",
             "Prezzo":         dati.get("prezzoFormatted", ""),  # già stringa formattata con “.”
             "Tipo":           "IBRIDO" if dati.get("tipoInverter", "ibrido") == "ibrido" else "DI STRINGA",
@@ -359,11 +361,13 @@ def genera_doc():
         path_docx_out = os.path.join(OUT_DIR, nome_docx_out)
 
         # 3) Prepara il contesto per docxtpl
-        np_value = NUM_PANNELLI.get(dati.get("tipologia"), {}).get(int(dati.get("potenza", 0)), "")
+        extra_pan = int(dati.get("extraPannelli", 0))
+        extra_kw = extra_pan // 2
+        np_value = (NUM_PANNELLI.get(dati.get("tipologia"), {}).get(int(dati.get("potenza", 0)), 0) + extra_pan)
         contesto = {
             "Nome":           dati.get("nome", ""),
             "Cognome":        dati.get("cognome", ""),
-            "Pot":            f"{int(dati.get('potenza', 0))}",
+            "Pot":            f"{int(dati.get('potenza', 0)) + extra_kw}",
             "Acc":            f"{int(dati.get('accumulo', 0))}" if dati.get("accumulo", 0) > 0 else "",
             "Prezzo":         dati.get("prezzoFormatted", ""),
             "Tipo":           "IBRIDO" if dati.get("tipoInverter", "ibrido") == "ibrido" else "DI STRINGA",
