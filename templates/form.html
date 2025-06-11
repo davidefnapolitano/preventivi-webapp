@@ -67,7 +67,14 @@
         <!-- Opzioni popolate dinamicamente -->
       </select>
 
-      <!-- 7. Installazione: Sì/No -->
+      <!-- 7. Tipologia Inverter (visibile solo senza accumulo) -->
+      <label for="tipoInverter" id="label-tipo-inverter" class="hidden">Tipologia Inverter</label>
+      <select id="tipoInverter" name="tipoInverter" class="hidden">
+        <option value="stringa">Stringa</option>
+        <option value="ibrido">Ibrido</option>
+      </select>
+
+      <!-- 8. Installazione: Sì/No -->
       <label for="installazione">Installazione</label>
       <select id="installazione" name="installazione" required>
         <option value="si">Sì (con installazione)</option>
@@ -75,7 +82,7 @@
       </select>
       <p class="note">Se selezioni “No, solo fornitura”, il costo di installazione verrà escluso.</p>
 
-      <!-- 8. Tipologia di Tetto -->
+      <!-- 9. Tipologia di Tetto -->
       <label for="tetto">Tipologia di Tetto</label>
       <select id="tetto" name="tetto" required>
         <option value="inclinato">Inclinato</option>
@@ -229,6 +236,8 @@
     const tipologiaEl        = document.getElementById('tipologia');
     const tagliaEl           = document.getElementById('taglia');
     const accumuloEl         = document.getElementById('accumulo');
+    const tipoInverterEl     = document.getElementById('tipoInverter');
+    const labelTipoInverter  = document.getElementById('label-tipo-inverter');
     const installazioneEl    = document.getElementById('installazione');
     const tettoEl            = document.getElementById('tetto');
     const objPannelliEl      = document.getElementById('objPannelli');
@@ -245,6 +254,21 @@
     const generaDocBtn       = document.getElementById('generaDocBtn');
     const salvaSheetBtn      = document.getElementById('salvaSheetBtn');
     const adminOnlyEls       = document.querySelectorAll('.admin-only');
+
+    function updateTipoInverterVisibility() {
+      if (accumuloEl.disabled || accumuloEl.value === '' || parseFloat(accumuloEl.value) > 0) {
+        tipoInverterEl.value = 'ibrido';
+        tipoInverterEl.disabled = true;
+        tipoInverterEl.classList.add('hidden');
+        labelTipoInverter.classList.add('hidden');
+      } else {
+        tipoInverterEl.disabled = false;
+        tipoInverterEl.classList.remove('hidden');
+        labelTipoInverter.classList.remove('hidden');
+      }
+    }
+
+    updateTipoInverterVisibility();
 
     // Span dove mostriamo i risultati
     const displayPotenza           = document.getElementById('display-potenza');
@@ -377,6 +401,8 @@
         o.textContent = kWh + ' kWh';
         accumuloEl.appendChild(o);
       });
+
+      updateTipoInverterVisibility();
     }
 
     // Se cambia TipologiaCliente o Tipologia, aggiorno dropdown
@@ -387,11 +413,13 @@
       objInverterEl.checked = true;
       objAccumuloEl.checked = true;
       objAccumuloEl.disabled = true;
+      updateTipoInverterVisibility();
     });
     tipologiaEl.addEventListener('change', () => {
       aggiornaDropdowns();
       objAccumuloEl.checked = true;
       objAccumuloEl.disabled = true;
+      updateTipoInverterVisibility();
     });
 
     // Quando cambio “Accumulo” >0 abilito/disabilito checkbox Accumulo
@@ -403,6 +431,7 @@
         objAccumuloEl.disabled = true;
         objAccumuloEl.checked = false;
       }
+      updateTipoInverterVisibility();
     });
 
     // --- CALCOLO DEL PREVENTIVO ---
@@ -466,9 +495,9 @@
         costo += costData.accumulo[tipologia][accumulo] || 0;
       }
 
-      // 2.e) Inverter  
+      // 2.e) Inverter
       if (wantInverter) {
-        const invType = wantAccumulo ? 'ibrido' : 'stringa';
+        const invType = wantAccumulo ? 'ibrido' : tipoInverterEl.value;
         costo += costData.inverter[tipologia][invType][potenza] || 0;
         // Meter va sempre sommato se c'è inverter (o accumulo)
         costo += costData.meter[tipologia][potenza] || 0;
