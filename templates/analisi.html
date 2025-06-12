@@ -25,10 +25,7 @@
   <div class="container" data-kw="{{ kw }}">
     <h1>Analisi Energetica</h1>
     <button type="button" onclick="history.back()">Torna al Preventivo</button>
-    <label for="nome">Nome</label>
-    <input type="text" id="nome" placeholder="Mario" />
-    <label for="cognome">Cognome</label>
-    <input type="text" id="cognome" placeholder="Rossi" />
+    <p id="cliente-info"></p>
     <p>Potenza Impianto: <strong id="kw-val"></strong> kW</p>
     <label for="address">Indirizzo</label>
     <input type="text" id="address" placeholder="Inserisci indirizzo" />
@@ -58,8 +55,14 @@
   </div>
 
 <script>
-const kw = parseFloat(document.querySelector('.container').dataset.kw) || 1;
+const params = new URLSearchParams(window.location.search);
+const kw = parseFloat(params.get('kw')) || parseFloat(document.querySelector('.container').dataset.kw) || 1;
+const nomeCliente = params.get('nome') || '';
+const cognomeCliente = params.get('cognome') || '';
 document.getElementById('kw-val').textContent = kw.toFixed(0);
+if(nomeCliente && cognomeCliente){
+  document.getElementById('cliente-info').textContent = `${nomeCliente} ${cognomeCliente}`;
+}
 const mesi = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 let chart = new Chart(document.getElementById('chart'), {
   type: 'bar',
@@ -147,12 +150,12 @@ document.getElementById('analizza-btn').addEventListener('click', () => {
 });
 
 function preparaPayload() {
-  const nome = document.getElementById('nome').value.trim();
-  const cognome = document.getElementById('cognome').value.trim();
+  const nome = nomeCliente;
+  const cognome = cognomeCliente;
   const orient = parseFloat(document.getElementById('azimuth').value);
   const incl = parseFloat(document.getElementById('tilt').value);
   if (!nome || !cognome) {
-    alert('Inserisci nome e cognome');
+    alert('Nome o cognome mancanti');
     return null;
   }
   if (lastMonthly.length !== 12) {

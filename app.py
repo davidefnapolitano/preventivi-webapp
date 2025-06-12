@@ -25,6 +25,7 @@ from flask import (
     session,
 )
 from docxtpl import DocxTemplate
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import gspread
 from google.oauth2.service_account import Credentials
 import requests
@@ -539,7 +540,7 @@ def genera_doc_analisi():
             "Pot": f"{kw}",
             "Incl": str(dati.get("incl", "")),
             "Orient": str(dati.get("orient", "")),
-            "Grafico": InlineImage(doc, io.BytesIO(img_data), width=Mm(120)),
+            "Grafico": InlineImage(doc, io.BytesIO(img_data), width=Mm(160)),
         }
 
         days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -559,6 +560,10 @@ def genera_doc_analisi():
         contesto["Prod_tot"] = f"{float(total):.2f}"
 
         doc.render(contesto)
+        for p in doc.docx.paragraphs:
+            for run in p.runs:
+                if run._element.xpath('.//pic:pic', namespaces={'pic': 'http://schemas.openxmlformats.org/drawingml/2006/picture'}):
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.save(path_docx_out)
 
         with open(path_docx_out, "rb") as f:
@@ -607,7 +612,7 @@ def genera_pdf_analisi():
             "Pot": f"{kw}",
             "Incl": str(dati.get("incl", "")),
             "Orient": str(dati.get("orient", "")),
-            "Grafico": InlineImage(doc, io.BytesIO(img_data), width=Mm(120)),
+            "Grafico": InlineImage(doc, io.BytesIO(img_data), width=Mm(160)),
         }
         days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         for i in range(12):
@@ -625,6 +630,10 @@ def genera_pdf_analisi():
         contesto["Prod_tot"] = f"{float(total):.2f}"
 
         doc.render(contesto)
+        for p in doc.docx.paragraphs:
+            for run in p.runs:
+                if run._element.xpath('.//pic:pic', namespaces={'pic': 'http://schemas.openxmlformats.org/drawingml/2006/picture'}):
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.save(path_docx_out)
 
         cmd = [
