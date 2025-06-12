@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Analisi Energetica</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <style>
     body { font-family: Arial, sans-serif; background:#f5f5f5; color:#333; padding:20px; }
     .container { max-width:700px; margin:0 auto; background:#fff; border-radius:8px; padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
@@ -67,7 +68,17 @@ const mesi = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ot
 let chart = new Chart(document.getElementById('chart'), {
   type: 'bar',
   data: { labels: mesi, datasets: [{ label: 'kWh', backgroundColor:'#ff9a3c', data: [] }] },
-  options: { scales:{ y:{ beginAtZero:true } } }
+  options: {
+    scales:{ y:{ beginAtZero:true } },
+    plugins:{
+      datalabels:{
+        anchor:'end',
+        align:'start',
+        formatter:v=>v.toFixed(2)
+      }
+    }
+  },
+  plugins:[ChartDataLabels]
 });
 
 const generaPdfAnalisiBtn = document.getElementById('generaPdfAnalisiBtn');
