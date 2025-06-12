@@ -450,18 +450,29 @@ def api_analisi():
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         js = resp.json()
-        monthly_data = js.get("outputs", {}).get("monthly")
-        if not isinstance(monthly_data, list):
+        monthly_section = js.get("outputs", {}).get("monthly")
+        values = []
+        if isinstance(monthly_section, list):
+            # PVGIS may return an array of objects or numbers
+            for item in monthly_section:
+                if isinstance(item, dict):
+                    v = item.get("E_m")
+                else:
+                    v = item
+                try:
+                    values.append(float(v))
+                except (TypeError, ValueError):
+                    continue
+        elif isinstance(monthly_section, dict) and isinstance(monthly_section.get("E_m"), list):
+            for v in monthly_section.get("E_m"):
+                try:
+                    values.append(float(v))
+                except (TypeError, ValueError):
+                    continue
+        if len(values) != 12:
             raise RuntimeError("Risposta PVGIS non valida")
-        monthly = []
-        total = 0.0
-        for m in monthly_data:
-            try:
-                val = float(m.get("E_m"))
-            except (TypeError, ValueError, AttributeError):
-                continue
-            monthly.append(val)
-            total += val
+        total = sum(values)
+        monthly = values
         return jsonify({"monthly": monthly, "total": total})
     except Exception as e:
         traceback.print_exc()
