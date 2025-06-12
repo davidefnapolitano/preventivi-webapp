@@ -27,6 +27,7 @@ from flask import (
 from docxtpl import DocxTemplate
 import gspread
 from google.oauth2.service_account import Credentials
+import requests
 
 # ------------------------------------------------------------
 # CONFIGURAZIONE FOLDER E TEMPLATE
@@ -411,6 +412,53 @@ def genera_doc():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ------------------------------------------------------------
+# ROUTE PAGINA ANALISI ENERGETICA
+# ------------------------------------------------------------
+@app.route("/analisi", methods=["GET"])
+def analisi():
+    if "username" not in session:
+        return redirect(url_for("login"))
+    kw = request.args.get("kw", "")
+    return render_template("analisi.html", username=session.get("username"), kw=kw)
+
+
+# ------------------------------------------------------------
+# API PVGIS
+# ------------------------------------------------------------
+@app.route("/api/analisi", methods=["POST"])
+def api_analisi():
+    try:
+        data = request.get_json(force=True)
+        lat = float(data.get("lat"))
+        lon = float(data.get("lon"))
+        azimuth = float(data.get("azimuth"))  # 0=N, 90=E
+        tilt = float(data.get("tilt"))
+        kw = float(data.get("kw", 1))
+
+        aspect = azimuth - 180  # PVGIS: 0=S, west positive
+
+        url = (
+            "https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?"
+            f"lat={lat}&lon={lon}&peakpower={kw}&loss=14&angle={tilt}&aspect={aspect}&outputformat=json"
+        )
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        js = resp.json()
+        monthly = []
+        total = 0.0
+        for m in js.get("outputs", {}).get("monthly", []):
+            val = m.get("E_m")
+            if val is None:
+                continue
+            monthly.append(val)
+            total += val
+        return jsonify({"monthly": monthly, "total": total})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 
