@@ -558,6 +558,7 @@ def genera_doc_analisi():
         if total is None:
             total = sum(monthly)
         contesto["Prod_tot"] = f"{float(total):.2f}"
+        contesto["Prot_tot"] = contesto["Prod_tot"]
 
         doc.render(contesto)
         for p in doc.docx.paragraphs:
@@ -629,6 +630,7 @@ def genera_pdf_analisi():
         if total is None:
             total = sum(monthly)
         contesto["Prod_tot"] = f"{float(total):.2f}"
+        contesto["Prot_tot"] = contesto["Prod_tot"]
 
         doc.render(contesto)
         for p in doc.docx.paragraphs:
