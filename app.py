@@ -451,24 +451,48 @@ def api_analisi():
         resp.raise_for_status()
         js = resp.json()
         monthly_section = js.get("outputs", {}).get("monthly")
-        values = []
-        if isinstance(monthly_section, list):
-            # PVGIS may return an array of objects or numbers
-            for item in monthly_section:
-                if isinstance(item, dict):
-                    v = item.get("E_m")
-                else:
-                    v = item
-                try:
-                    values.append(float(v))
-                except (TypeError, ValueError):
-                    continue
-        elif isinstance(monthly_section, dict) and isinstance(monthly_section.get("E_m"), list):
-            for v in monthly_section.get("E_m"):
-                try:
-                    values.append(float(v))
-                except (TypeError, ValueError):
-                    continue
+
+        def extract_vals(obj):
+            """Recursively search for a list of 12 monthly values."""
+            if obj is None:
+                return None
+            if isinstance(obj, list):
+                res = []
+                for it in obj:
+                    if isinstance(it, dict):
+                        if "E_m" in it:
+                            try:
+                                res.append(float(it["E_m"]))
+                            except (TypeError, ValueError):
+                                pass
+                        else:
+                            sub = extract_vals(it)
+                            if sub and len(sub) == 12:
+                                return sub
+                    else:
+                        try:
+                            res.append(float(it))
+                        except (TypeError, ValueError):
+                            pass
+                if len(res) == 12:
+                    return res
+            elif isinstance(obj, dict):
+                if isinstance(obj.get("E_m"), list):
+                    res = []
+                    for v in obj.get("E_m"):
+                        try:
+                            res.append(float(v))
+                        except (TypeError, ValueError):
+                            pass
+                    if len(res) == 12:
+                        return res
+                for v in obj.values():
+                    sub = extract_vals(v)
+                    if sub and len(sub) == 12:
+                        return sub
+            return None
+
+        values = extract_vals(monthly_section) or []
         if len(values) != 12:
             raise RuntimeError("Risposta PVGIS non valida")
         total = sum(values)
