@@ -17,6 +17,7 @@
     th, td { padding:8px; border-bottom:1px solid #ddd; text-align:right; }
     th { background:#2c7873; color:white; text-align:center; }
     canvas { margin-top:30px; }
+    #map { width:100%; height:300px; margin-top:10px; }
     .hidden { display:none; }
   </style>
 </head>
@@ -25,6 +26,9 @@
     <h1>Analisi Energetica</h1>
     <button type="button" onclick="history.back()">Torna al Preventivo</button>
     <p>Potenza Impianto: <strong id="kw-val"></strong> kW</p>
+    <label for="address">Indirizzo</label>
+    <input type="text" id="address" placeholder="Inserisci indirizzo" />
+    <div id="map" style="height:300px;margin-top:10px;"></div>
     <label for="lat">Latitudine</label>
     <input type="number" step="0.0001" id="lat" placeholder="es. 45.07" />
     <label for="lon">Longitudine</label>
@@ -56,6 +60,38 @@ let chart = new Chart(document.getElementById('chart'), {
   data: { labels: mesi, datasets: [{ label: 'kWh', backgroundColor:'#ff9a3c', data: [] }] },
   options: { scales:{ y:{ beginAtZero:true } } }
 });
+
+let map, marker, autocomplete;
+
+function updateLatLon(latlng){
+  document.getElementById('lat').value = latlng.lat().toFixed(6);
+  document.getElementById('lon').value = latlng.lng().toFixed(6);
+}
+
+function initMap(){
+  const defaultPos = {lat:41.9, lng:12.5};
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: defaultPos,
+    zoom: 8,
+    mapTypeId: 'satellite',
+    tilt: 0
+  });
+  marker = new google.maps.Marker({position: defaultPos, map, draggable:true});
+  marker.addListener('dragend', () => updateLatLon(marker.getPosition()));
+  map.addListener('rightclick', (e) => {
+    marker.setPosition(e.latLng);
+    updateLatLon(e.latLng);
+  });
+  autocomplete = new google.maps.places.Autocomplete(document.getElementById('address'));
+  autocomplete.addListener('place_changed', () => {
+    const place = autocomplete.getPlace();
+    if(!place.geometry || !place.geometry.location) return;
+    map.panTo(place.geometry.location);
+    marker.setPosition(place.geometry.location);
+    updateLatLon(place.geometry.location);
+  });
+  updateLatLon(defaultPos);
+}
 
 function show(el){ el.classList.remove('hidden'); }
 function hide(el){ el.classList.add('hidden'); }
@@ -96,5 +132,6 @@ document.getElementById('analizza-btn').addEventListener('click', () => {
   .catch(err => alert(err));
 });
 </script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&callback=initMap"></script>
 </body>
 </html>
