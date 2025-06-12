@@ -25,6 +25,7 @@ from flask import (
     session,
 )
 from docxtpl import DocxTemplate
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import gspread
 from google.oauth2.service_account import Credentials
 import requests
@@ -61,6 +62,7 @@ TPL_SENZA_ACCUMULO_WALLBOX = os.path.join(
 TPL_CON_ACCUMULO_WALLBOX = os.path.join(
     TEMPLATES_DOCX, "template_con_accumulo_wallbox.docx"
 )
+TPL_ANALISI = os.path.join(TEMPLATES_DOCX, "template_analisi.docx")
 
 # Crea la cartella OUT se non esiste
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -507,6 +509,171 @@ def api_analisi():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+
+# ------------------------------------------------------------
+# GENERA DOCUMENTI PER ANALISI ENERGETICA
+# ------------------------------------------------------------
+
+@app.route("/genera_doc_analisi", methods=["POST"])
+def genera_doc_analisi():
+    try:
+        dati = request.get_json(force=True)
+
+        uid = uuid.uuid4().hex[:8]
+        base_name = f"temp_{dati['nome']}_{dati['cognome']}_{uid}"
+        nome_docx_out = base_name + ".docx"
+        path_docx_out = os.path.join(OUT_DIR, nome_docx_out)
+
+        kw = float(dati.get("potenza", 0) or 0)
+        monthly = dati.get("monthly", [])
+        monthly_u = dati.get("monthly_u", [])
+        img_b64 = dati.get("grafico", "")
+        img_data = base64.b64decode(img_b64.split(",", 1)[1]) if "," in img_b64 else base64.b64decode(img_b64)
+
+        doc = DocxTemplate(TPL_ANALISI)
+        from docxtpl import InlineImage
+        from docx.shared import Mm
+        contesto = {
+            "Nome": dati.get("nome", ""),
+            "Cognome": dati.get("cognome", ""),
+            "Pot": f"{kw}",
+            "Incl": str(dati.get("incl", "")),
+            "Orient": str(dati.get("orient", "")),
+            "Grafico": InlineImage(doc, io.BytesIO(img_data), width=Mm(160)),
+        }
+
+        days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        for i in range(12):
+            val = monthly[i] if i < len(monthly) else 0
+            contesto[f"Prod_{i+1:02d}"] = f"{val:.2f}"
+            u_val = (
+                monthly_u[i]
+                if i < len(monthly_u)
+                else (val / (days[i] * kw) if kw else 0)
+            )
+            contesto[f"Prod_{i+1:02d}_u"] = f"{u_val:.2f}"
+
+        total = dati.get("total")
+        if total is None:
+            total = sum(monthly)
+        contesto["Prod_tot"] = f"{float(total):.2f}"
+
+        doc.render(contesto)
+        for p in doc.docx.paragraphs:
+            for run in p.runs:
+                if run._element.xpath('.//pic:pic', namespaces={'pic': 'http://schemas.openxmlformats.org/drawingml/2006/picture'}):
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        doc.save(path_docx_out)
+
+        with open(path_docx_out, "rb") as f:
+            docx_bytes = f.read()
+
+        try:
+            os.remove(path_docx_out)
+        except Exception:
+            pass
+
+        download_name = f"Analisi_{dati['nome']}_{dati['cognome']}_{uid}.docx"
+        return send_file(
+            io.BytesIO(docx_bytes),
+            as_attachment=True,
+            download_name=download_name,
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/genera_pdf_analisi", methods=["POST"])
+def genera_pdf_analisi():
+    try:
+        dati = request.get_json(force=True)
+
+        uid = uuid.uuid4().hex[:8]
+        base_name = f"temp_{dati['nome']}_{dati['cognome']}_{uid}"
+        nome_docx_out = base_name + ".docx"
+        path_docx_out = os.path.join(OUT_DIR, nome_docx_out)
+
+        kw = float(dati.get("potenza", 0) or 0)
+        monthly = dati.get("monthly", [])
+        monthly_u = dati.get("monthly_u", [])
+        img_b64 = dati.get("grafico", "")
+        img_data = base64.b64decode(img_b64.split(",", 1)[1]) if "," in img_b64 else base64.b64decode(img_b64)
+
+        doc = DocxTemplate(TPL_ANALISI)
+        from docxtpl import InlineImage
+        from docx.shared import Mm
+        contesto = {
+            "Nome": dati.get("nome", ""),
+            "Cognome": dati.get("cognome", ""),
+            "Pot": f"{kw}",
+            "Incl": str(dati.get("incl", "")),
+            "Orient": str(dati.get("orient", "")),
+            "Grafico": InlineImage(doc, io.BytesIO(img_data), width=Mm(160)),
+        }
+        days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        for i in range(12):
+            val = monthly[i] if i < len(monthly) else 0
+            contesto[f"Prod_{i+1:02d}"] = f"{val:.2f}"
+            u_val = (
+                monthly_u[i]
+                if i < len(monthly_u)
+                else (val / (days[i] * kw) if kw else 0)
+            )
+            contesto[f"Prod_{i+1:02d}_u"] = f"{u_val:.2f}"
+        total = dati.get("total")
+        if total is None:
+            total = sum(monthly)
+        contesto["Prod_tot"] = f"{float(total):.2f}"
+
+        doc.render(contesto)
+        for p in doc.docx.paragraphs:
+            for run in p.runs:
+                if run._element.xpath('.//pic:pic', namespaces={'pic': 'http://schemas.openxmlformats.org/drawingml/2006/picture'}):
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        doc.save(path_docx_out)
+
+        cmd = [
+            "libreoffice",
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            OUT_DIR,
+            path_docx_out,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr)
+
+        pdf_generated = base_name + ".pdf"
+        path_pdf_generated = os.path.join(OUT_DIR, pdf_generated)
+        with open(path_pdf_generated, "rb") as f:
+            pdf_bytes = f.read()
+
+        try:
+            os.remove(path_pdf_generated)
+        except Exception:
+            pass
+        try:
+            os.remove(path_docx_out)
+        except Exception:
+            pass
+
+        download_name = f"Analisi_{dati['nome']}_{dati['cognome']}_{uid}.pdf"
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            as_attachment=True,
+            download_name=download_name,
+            mimetype="application/pdf",
+        )
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 

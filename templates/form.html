@@ -483,9 +483,21 @@
         alert('Seleziona prima la taglia dell\'impianto');
         return;
       }
+      const nome = document.getElementById('nome').value.trim();
+      const cognome = document.getElementById('cognome').value.trim();
+      if (!nome || !cognome) {
+        e.preventDefault();
+        alert('Inserisci nome e cognome prima di procedere');
+        return;
+      }
       const extraPanels = parseInt(morePannelliEl.value) || 0;
       const kw = potenza + extraPanels / 2;
-      analisiLink.href = '/analisi?kw=' + kw;
+      const params = new URLSearchParams({
+        kw: kw,
+        nome: nome,
+        cognome: cognome
+      });
+      analisiLink.href = '/analisi?' + params.toString();
     });
 
     // --- CALCOLO DEL PREVENTIVO ---
