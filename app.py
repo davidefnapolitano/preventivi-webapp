@@ -422,7 +422,13 @@ def analisi():
     if "username" not in session:
         return redirect(url_for("login"))
     kw = request.args.get("kw", "")
-    return render_template("analisi.html", username=session.get("username"), kw=kw)
+    maps_api_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+    return render_template(
+        "analisi.html",
+        username=session.get("username"),
+        kw=kw,
+        maps_api_key=maps_api_key,
+    )
 
 
 # ------------------------------------------------------------
