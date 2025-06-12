@@ -27,6 +27,7 @@ from flask import (
 from docxtpl import DocxTemplate
 import gspread
 from google.oauth2.service_account import Credentials
+import requests
 
 # ------------------------------------------------------------
 # CONFIGURAZIONE FOLDER E TEMPLATE
@@ -411,6 +412,95 @@ def genera_doc():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ------------------------------------------------------------
+# ROUTE PAGINA ANALISI ENERGETICA
+# ------------------------------------------------------------
+@app.route("/analisi", methods=["GET"])
+def analisi():
+    if "username" not in session:
+        return redirect(url_for("login"))
+    kw = request.args.get("kw", "")
+    return render_template("analisi.html", username=session.get("username"), kw=kw)
+
+
+# ------------------------------------------------------------
+# API PVGIS
+# ------------------------------------------------------------
+@app.route("/api/analisi", methods=["POST"])
+def api_analisi():
+    try:
+        data = request.get_json(force=True)
+        try:
+            lat = float(data.get("lat"))
+            lon = float(data.get("lon"))
+            azimuth = float(data.get("azimuth"))  # 0=N, 90=E
+            tilt = float(data.get("tilt"))
+            kw = float(data.get("kw", 1) or 1)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Parametri non validi"}), 400
+
+        aspect = azimuth - 180  # PVGIS: 0=S, west positive
+
+        url = (
+            "https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?"
+            f"lat={lat}&lon={lon}&peakpower={kw}&loss=14&angle={tilt}&aspect={aspect}&outputformat=json"
+        )
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        js = resp.json()
+        monthly_section = js.get("outputs", {}).get("monthly")
+
+        def extract_vals(obj):
+            """Recursively search for a list of 12 monthly values."""
+            if obj is None:
+                return None
+            if isinstance(obj, list):
+                res = []
+                for it in obj:
+                    if isinstance(it, dict):
+                        if "E_m" in it:
+                            try:
+                                res.append(float(it["E_m"]))
+                            except (TypeError, ValueError):
+                                pass
+                        else:
+                            sub = extract_vals(it)
+                            if sub and len(sub) == 12:
+                                return sub
+                    else:
+                        try:
+                            res.append(float(it))
+                        except (TypeError, ValueError):
+                            pass
+                if len(res) == 12:
+                    return res
+            elif isinstance(obj, dict):
+                if isinstance(obj.get("E_m"), list):
+                    res = []
+                    for v in obj.get("E_m"):
+                        try:
+                            res.append(float(v))
+                        except (TypeError, ValueError):
+                            pass
+                    if len(res) == 12:
+                        return res
+                for v in obj.values():
+                    sub = extract_vals(v)
+                    if sub and len(sub) == 12:
+                        return sub
+            return None
+
+        values = extract_vals(monthly_section) or []
+        if len(values) != 12:
+            raise RuntimeError("Risposta PVGIS non valida")
+        total = sum(values)
+        monthly = values
+        return jsonify({"monthly": monthly, "total": total})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 

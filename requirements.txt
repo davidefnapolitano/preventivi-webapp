@@ -3,3 +3,4 @@ docxtpl>=0.18.3
 gunicorn>=20.0.4
 gspread
 google-auth
+requests
