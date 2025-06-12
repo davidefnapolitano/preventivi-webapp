@@ -432,11 +432,14 @@ def analisi():
 def api_analisi():
     try:
         data = request.get_json(force=True)
-        lat = float(data.get("lat"))
-        lon = float(data.get("lon"))
-        azimuth = float(data.get("azimuth"))  # 0=N, 90=E
-        tilt = float(data.get("tilt"))
-        kw = float(data.get("kw", 1))
+        try:
+            lat = float(data.get("lat"))
+            lon = float(data.get("lon"))
+            azimuth = float(data.get("azimuth"))  # 0=N, 90=E
+            tilt = float(data.get("tilt"))
+            kw = float(data.get("kw", 1) or 1)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Parametri non validi"}), 400
 
         aspect = azimuth - 180  # PVGIS: 0=S, west positive
 
@@ -447,11 +450,15 @@ def api_analisi():
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         js = resp.json()
+        monthly_data = js.get("outputs", {}).get("monthly")
+        if not isinstance(monthly_data, list):
+            raise RuntimeError("Risposta PVGIS non valida")
         monthly = []
         total = 0.0
-        for m in js.get("outputs", {}).get("monthly", []):
-            val = m.get("E_m")
-            if val is None:
+        for m in monthly_data:
+            try:
+                val = float(m.get("E_m"))
+            except (TypeError, ValueError, AttributeError):
                 continue
             monthly.append(val)
             total += val

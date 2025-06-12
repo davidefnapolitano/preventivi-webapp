@@ -64,6 +64,10 @@ document.getElementById('analizza-btn').addEventListener('click', () => {
   const lon = parseFloat(document.getElementById('lon').value);
   const az = parseFloat(document.getElementById('azimuth').value);
   const tilt = parseFloat(document.getElementById('tilt').value);
+  if ([lat, lon, az, tilt].some(v => isNaN(v))) {
+    alert('Inserisci tutti i parametri.');
+    return;
+  }
   fetch('/api/analisi', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
