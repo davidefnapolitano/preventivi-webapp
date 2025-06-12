@@ -562,7 +562,8 @@ def genera_doc_analisi():
         doc.render(contesto)
         for p in doc.docx.paragraphs:
             for run in p.runs:
-                if run._element.xpath('.//pic:pic', namespaces={'pic': 'http://schemas.openxmlformats.org/drawingml/2006/picture'}):
+                # docx already provides default namespaces in BaseOxmlElement.xpath
+                if run._element.xpath('.//pic:pic'):
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.save(path_docx_out)
 
@@ -632,7 +633,8 @@ def genera_pdf_analisi():
         doc.render(contesto)
         for p in doc.docx.paragraphs:
             for run in p.runs:
-                if run._element.xpath('.//pic:pic', namespaces={'pic': 'http://schemas.openxmlformats.org/drawingml/2006/picture'}):
+                # BaseOxmlElement.xpath uses default namespaces automatically
+                if run._element.xpath('.//pic:pic'):
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.save(path_docx_out)
 
