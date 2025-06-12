@@ -25,6 +25,7 @@
   <div class="container" data-kw="{{ kw }}">
     <h1>Analisi Energetica</h1>
     <button type="button" onclick="history.back()">Torna al Preventivo</button>
+    <p id="cliente-info"></p>
     <p>Potenza Impianto: <strong id="kw-val"></strong> kW</p>
     <label for="address">Indirizzo</label>
     <input type="text" id="address" placeholder="Inserisci indirizzo" />
@@ -49,17 +50,29 @@
       </tfoot>
     </table>
     <canvas id="chart" width="600" height="300" class="hidden"></canvas>
+    <button id="generaPdfAnalisiBtn" class="hidden">Genera Analisi PDF</button>
+    <button id="generaDocAnalisiBtn" class="hidden">Genera Analisi DOC</button>
   </div>
 
 <script>
-const kw = parseFloat(document.querySelector('.container').dataset.kw) || 1;
+const params = new URLSearchParams(window.location.search);
+const kw = parseFloat(params.get('kw')) || parseFloat(document.querySelector('.container').dataset.kw) || 1;
+const nomeCliente = params.get('nome') || '';
+const cognomeCliente = params.get('cognome') || '';
 document.getElementById('kw-val').textContent = kw.toFixed(0);
+if(nomeCliente && cognomeCliente){
+  document.getElementById('cliente-info').textContent = `${nomeCliente} ${cognomeCliente}`;
+}
 const mesi = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 let chart = new Chart(document.getElementById('chart'), {
   type: 'bar',
   data: { labels: mesi, datasets: [{ label: 'kWh', backgroundColor:'#ff9a3c', data: [] }] },
   options: { scales:{ y:{ beginAtZero:true } } }
 });
+
+const generaPdfAnalisiBtn = document.getElementById('generaPdfAnalisiBtn');
+const generaDocAnalisiBtn = document.getElementById('generaDocAnalisiBtn');
+let lastMonthly = [];
 
 let map, marker, autocomplete;
 
@@ -129,6 +142,74 @@ document.getElementById('analizza-btn').addEventListener('click', () => {
     chart.update();
     show(document.getElementById('result-table'));
     show(document.getElementById('chart'));
+    lastMonthly = data.monthly;
+    show(generaPdfAnalisiBtn);
+    show(generaDocAnalisiBtn);
+  })
+  .catch(err => alert(err));
+});
+
+function preparaPayload() {
+  const nome = nomeCliente;
+  const cognome = cognomeCliente;
+  const orient = parseFloat(document.getElementById('azimuth').value);
+  const incl = parseFloat(document.getElementById('tilt').value);
+  if (!nome || !cognome) {
+    alert('Nome o cognome mancanti');
+    return null;
+  }
+  if (lastMonthly.length !== 12) {
+    alert('Esegui prima l\'analisi');
+    return null;
+  }
+  const days = [31,28,31,30,31,30,31,31,30,31,30,31];
+  const monthly_u = lastMonthly.map((v,i)=> v/(days[i]*kw));
+  return {
+    nome,
+    cognome,
+    potenza: kw,
+    orient,
+    incl,
+    monthly: lastMonthly,
+    monthly_u,
+    grafico: chart.toBase64Image()
+  };
+}
+
+generaPdfAnalisiBtn.addEventListener('click', () => {
+  const payload = preparaPayload();
+  if(!payload) return;
+  fetch('/genera_pdf_analisi', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(r => { if(!r.ok) throw new Error('Errore server'); return r.blob(); })
+  .then(b => {
+    const url = window.URL.createObjectURL(b);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Analisi_${payload.nome}_${payload.cognome}.pdf`;
+    document.body.appendChild(a); a.click(); a.remove();
+  })
+  .catch(err => alert(err));
+});
+
+generaDocAnalisiBtn.addEventListener('click', () => {
+  const payload = preparaPayload();
+  if(!payload) return;
+  fetch('/genera_doc_analisi', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(r => { if(!r.ok) throw new Error('Errore server'); return r.blob(); })
+  .then(b => {
+    const url = window.URL.createObjectURL(b);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Analisi_${payload.nome}_${payload.cognome}.docx`;
+    document.body.appendChild(a); a.click(); a.remove();
   })
   .catch(err => alert(err));
 });
